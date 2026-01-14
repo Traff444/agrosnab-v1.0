@@ -9,7 +9,7 @@ export function HeroSection() {
       <div className="absolute inset-0 -z-20">
         {/* Mobile Image */}
         <img
-          src="/mobilHero.webp"
+          src={`${import.meta.env.BASE_URL}mobilHero.webp`}
           alt=""
           className="h-full w-full object-cover object-center md:hidden"
           draggable={false}
@@ -24,7 +24,7 @@ export function HeroSection() {
           style={{ filter: 'brightness(0.7)' }}
           draggable={false}
         >
-          <source src="/1234.mp4" type="video/mp4" />
+          <source src={`${import.meta.env.BASE_URL}1234.mp4`} type="video/mp4" />
         </video>
         {/* общий overlay для читаемости */}
         <div className="absolute inset-0 bg-black/35" />

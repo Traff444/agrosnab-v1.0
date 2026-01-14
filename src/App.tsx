@@ -23,10 +23,10 @@ function App() {
   const [showAllProducts, setShowAllProducts] = useState(false);
 
   const productCoverImages = [
-    '/assortiment1.webp',
-    '/assortiment2.webp',
-    '/assortiment3.webp',
-    '/assortiment4.webp',
+    `${import.meta.env.BASE_URL}assortiment1.webp`,
+    `${import.meta.env.BASE_URL}assortiment2.webp`,
+    `${import.meta.env.BASE_URL}assortiment3.webp`,
+    `${import.meta.env.BASE_URL}assortiment4.webp`,
   ];
 
   const products = [
