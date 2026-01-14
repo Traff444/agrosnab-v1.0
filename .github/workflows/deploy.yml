@@ -31,6 +31,7 @@ jobs:
           rm -rf docs
           mkdir docs
           cp -r dist/* docs/
+          touch docs/.nojekyll
           git add docs/
           git commit -m "Deploy to GitHub Pages" || exit 0
           git push
