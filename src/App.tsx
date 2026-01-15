@@ -202,7 +202,7 @@ function App() {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <span>Специальные условия для дистрибьюторов</span>
+                  <span>Специальные условия для региональных компаний</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 mt-0.5" strokeWidth={2} />
