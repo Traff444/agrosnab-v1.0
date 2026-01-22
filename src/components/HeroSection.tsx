@@ -24,7 +24,7 @@ export function HeroSection() {
           style={{ filter: 'brightness(0.7)' }}
           draggable={false}
         >
-          <source src={`${import.meta.env.BASE_URL}1234.mp4`} type="video/mp4" />
+          <source src={`${import.meta.env.BASE_URL}hirovideo.mp4`} type="video/mp4" />
         </video>
         {/* общий overlay для читаемости */}
         <div className="absolute inset-0 bg-black/35" />
