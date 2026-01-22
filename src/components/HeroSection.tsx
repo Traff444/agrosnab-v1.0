@@ -9,7 +9,7 @@ export function HeroSection() {
       <div className="absolute inset-0 -z-20">
         {/* Mobile Image */}
         <img
-          src={`${import.meta.env.BASE_URL}mobilHero.webp`}
+          src={`${import.meta.env.BASE_URL}hiro%20mobil1.png`}
           alt=""
           className="h-full w-full object-cover object-center md:hidden"
           draggable={false}
