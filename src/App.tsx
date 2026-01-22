@@ -43,6 +43,7 @@ function App() {
     { name: 'Махорка Русская Traditional', weight: '50 кг' },
     { name: 'Махорка Perique Blend', weight: '100 кг' },
     { name: 'Махорка Latakia Special', weight: '100 кг' },
+    { name: 'Махорка №9', weight: '100 кг' },
   ].map((p, idx) => ({
     ...p,
     imageUrl: productCoverImages[idx % productCoverImages.length],
