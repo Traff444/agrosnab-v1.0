@@ -107,8 +107,8 @@ function App() {
             ))}
           </div>
 
-          {!showAllProducts && (
-            <div className="text-center">
+          <div className="text-center">
+            {!showAllProducts ? (
               <button
                 onClick={() => setShowAllProducts(true)}
                 className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white/10 transition-colors px-6 py-2.5 md:px-8 md:py-3 rounded-lg font-medium text-sm md:text-base"
@@ -116,8 +116,16 @@ function App() {
                 Показать весь ассортимент
                 <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
               </button>
-            </div>
-          )}
+            ) : (
+              <button
+                onClick={() => setShowAllProducts(false)}
+                className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white/10 transition-colors px-6 py-2.5 md:px-8 md:py-3 rounded-lg font-medium text-sm md:text-base"
+              >
+                Свернуть ассортимент
+                <ChevronDown className="w-4 h-4 md:w-5 md:h-5 rotate-180" />
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
