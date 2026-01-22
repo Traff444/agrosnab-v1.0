@@ -7,11 +7,11 @@ interface ProductCardProps {
 export function ProductCard({ name, weight, imageUrl }: ProductCardProps) {
   return (
     <div className="rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col h-full group border-2 border-white/80" style={{ backgroundColor: '#FFF8F0' }}>
-      <div className="relative w-full h-48 md:h-56 bg-gray-100 flex-shrink-0 overflow-hidden">
+      <div className="relative w-full h-48 md:h-56 bg-[#FFF8F0] flex-shrink-0 overflow-hidden p-2">
         <img
           src={imageUrl}
           alt={name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-contain transition-transform duration-500"
         />
       </div>
 
