@@ -334,7 +334,7 @@ function App() {
             playsInline
             className="h-full w-full object-cover"
           >
-            <source src={`${import.meta.env.BASE_URL}fon%20sekciy.mp4`} type="video/mp4" />
+            <source src={`${import.meta.env.BASE_URL}fon-sekciy.mp4`} type="video/mp4" />
           </video>
           <div className="absolute inset-0 bg-black/35" />
         </div>
