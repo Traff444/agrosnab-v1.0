@@ -95,7 +95,7 @@ function App() {
       </section>
 
       {/* Product Catalog */}
-      <section id="catalog" className="fon-bg catalog-animated-bg py-12 md:py-16 lg:py-24 px-4 md:px-6">
+      <section id="catalog" className="fon-bg py-12 md:py-16 lg:py-24 px-4 md:px-6">
         <div className="max-w-[1200px] mx-auto">
           <h2 className="font-heading font-bold text-2xl md:text-3xl lg:text-4xl mb-3 md:mb-4 text-text-on-dark">Ассортимент и цены</h2>
           <p className="text-sm md:text-base text-subtext-on-dark mb-8 md:mb-12 max-w-2xl">
