@@ -3,7 +3,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 
-from app.keyboards import main_menu_keyboard, confirm_cancel_keyboard
+from app.keyboards import main_menu_keyboard
 from app.sheets import sheets_client
 from app.drive import drive_client
 from app.photo_enhance import cleanup_tmp_files
@@ -22,18 +22,18 @@ async def show_status(message: Message) -> None:
     sheets_status = await sheets_client.test_connection()
     drive_status = await drive_client.test_connection()
 
-    lines = ["🔧 **Статус системы**\n"]
+    lines = ["🔧 Статус системы\n"]
 
     # Google Sheets status
     if sheets_status.get("ok"):
-        lines.append("✅ **Google Sheets**")
+        lines.append("✅ Google Sheets")
         lines.append(f"   Таблица: {sheets_status.get('spreadsheet_title', 'N/A')}")
         lines.append(f"   Листы: {', '.join(sheets_status.get('sheets', []))}")
         cols = sheets_status.get("columns_found", [])
         if cols:
             lines.append(f"   Колонки: {len(cols)} найдено")
     else:
-        lines.append("❌ **Google Sheets**")
+        lines.append("❌ Google Sheets")
         error = sheets_status.get("error", "Неизвестная ошибка")
         lines.append(f"   Ошибка: {error}")
 
@@ -45,10 +45,10 @@ async def show_status(message: Message) -> None:
 
     # Google Drive status
     if drive_status.get("ok"):
-        lines.append("✅ **Google Drive**")
+        lines.append("✅ Google Drive")
         lines.append(f"   Папка: {drive_status.get('folder_name', 'N/A')}")
     else:
-        lines.append("❌ **Google Drive**")
+        lines.append("❌ Google Drive")
         lines.append(f"   Ошибка: {drive_status.get('error', 'Неизвестная ошибка')}")
 
     lines.append("")
@@ -56,21 +56,28 @@ async def show_status(message: Message) -> None:
     # Cleanup option
     lines.append("🧹 Для очистки временных файлов используйте /cleanup")
 
-    await message.answer("\n".join(lines), reply_markup=main_menu_keyboard())
+    await message.answer("\n".join(lines), reply_markup=main_menu_keyboard(), parse_mode=None)
 
 
 @router.message(F.text == "/cleanup")
 async def request_cleanup(message: Message) -> None:
     """Request temp files cleanup."""
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Подтвердить", callback_data="cleanup_confirm")
+    builder.button(text="❌ Отмена", callback_data="cancel")
+    builder.adjust(2)
+
     await message.answer(
-        "🧹 **Очистка временных файлов**\n\n"
+        "🧹 Очистка временных файлов\n\n"
         "Будут удалены временные файлы старше 24 часов.\n"
         "Подтвердить?",
-        reply_markup=confirm_cancel_keyboard(),
+        reply_markup=builder.as_markup(),
     )
 
 
-@router.callback_query(F.data == "confirm")
+@router.callback_query(F.data == "cleanup_confirm")
 async def confirm_cleanup(callback: CallbackQuery) -> None:
     """Confirm and execute cleanup."""
     await callback.answer()
