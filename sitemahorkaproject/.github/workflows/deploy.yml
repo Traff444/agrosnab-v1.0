@@ -35,6 +35,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_APPS_SCRIPT_URL: ${{ secrets.VITE_APPS_SCRIPT_URL }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
