@@ -1,0 +1,454 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Desktop */
+  --header-h-desktop: 64px;  /* max */
+  --header-gap-desktop: 16px; /* top:16px floating */
+  --snap-offset-desktop: calc(var(--header-h-desktop) + var(--header-gap-desktop)); /* 80px */
+
+  /* Mobile (snap off, но якоря/scroll-margin полезны) */
+  --header-h-mobile: 56px;   /* max */
+  --header-gap-mobile: 12px; /* если на мобиле top 16px — замени на 16px */
+  --snap-offset-mobile: calc(var(--header-h-mobile) + var(--header-gap-mobile)); /* 68px */
+}
+
+@layer base {
+  body {
+    @apply font-body text-text-on-dark antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .bg-textured-dark {
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 100%),
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
+      linear-gradient(135deg, #6A7758 0%, #5d6650 100%);
+  }
+
+  .bg-textured-light {
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 100%),
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px),
+      linear-gradient(135deg, #F4F1EA 0%, #EBE7DD 100%);
+  }
+
+  .great-vibes-regular {
+    font-family: "Great Vibes", cursive;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  .brygada-1918 {
+    font-family: "Brygada 1918", serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  .hero-bg-mobile {
+    background-position: calc(100% + 200px) center;
+  }
+
+  @media (min-width: 768px) {
+    .hero-bg-mobile {
+      background-position: center right;
+    }
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.6s ease-out forwards;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.5s ease-out forwards;
+  }
+
+  .delay-100 {
+    animation-delay: 0.1s;
+  }
+
+  .delay-200 {
+    animation-delay: 0.2s;
+  }
+
+  .delay-300 {
+    animation-delay: 0.3s;
+  }
+
+  .delay-400 {
+    animation-delay: 0.4s;
+  }
+
+  /* Hero Scroll Indicator Animations */
+  @keyframes heroBounce {
+    0%, 100% {
+      transform: translate(-50%, 0);
+      opacity: 0.78;
+    }
+    50% {
+      transform: translate(-50%, 8px);
+      opacity: 0.92;
+    }
+  }
+
+  @keyframes heroWheel {
+    0% {
+      transform: translate(-50%, 0);
+      opacity: 0.9;
+    }
+    60% {
+      transform: translate(-50%, 10px);
+      opacity: 0;
+    }
+    100% {
+      transform: translate(-50%, 0);
+      opacity: 0.9;
+    }
+  }
+
+  .animate-heroBounce {
+    animation: heroBounce 1.6s ease-in-out infinite;
+  }
+
+  .animate-heroWheel {
+    animation: heroWheel 1.6s ease-in-out infinite;
+  }
+
+  .surface-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .surface-card-light {
+    background: #F6F5F1;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Wholesale Terms background */
+  .terms-bg {
+    position: relative;
+    background-image: url('/fon.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .terms-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.22);
+    pointer-events: none;
+  }
+
+  .terms-bg > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Shared fon.webp background for sections */
+  .fon-bg {
+    position: relative;
+    background-image: url('/fon.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .fon-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.22);
+    pointer-events: none;
+  }
+
+  .fon-bg > * {
+    position: relative;
+    z-index: 1;
+  }
+
+
+  /* Terms cards: тонкая светлая рамка + чуть ярче текст */
+  .terms-bg .terms-card {
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+  }
+
+  .terms-bg .terms-card h3 {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .terms-bg .terms-card p,
+  .terms-bg .terms-card ul {
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .terms-bg .terms-card strong {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  /* Quality cards: тонкая белая рамка + чуть ярче текст */
+  .quality-bg .quality-card {
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+  }
+
+  .quality-bg .quality-card h3 {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .quality-bg .quality-card p {
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .quality-bg .quality-card strong {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-up,
+    .animate-fade-in,
+    .animate-scale-in {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Header Styles - Floating Capsule */
+  .header {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 48px);
+    max-width: 1200px;
+    z-index: 1000;
+    border-radius: 24px;
+    background: rgba(245, 245, 240, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    transition: 
+      background 0.3s ease,
+      backdrop-filter 0.3s ease,
+      box-shadow 0.3s ease,
+      border-radius 0.3s ease;
+  }
+
+  .header.scrolled {
+    background: rgba(245, 245, 240, 0.95);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    top: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Header Logo */
+  .header-logo {
+    color: #2F3A2F;
+  }
+
+  .header.scrolled .header-logo {
+    color: #2B2B2B;
+  }
+
+  /* Navigation Links */
+  .nav-link {
+    color: #2F3A2F;
+  }
+
+  .nav-link:hover {
+    color: #7A8B6C;
+  }
+
+  .header.scrolled .nav-link {
+    color: #2B2B2B;
+  }
+
+  .header.scrolled .nav-link:hover {
+    color: #7A8B6C;
+  }
+
+  /* Mobile Menu Button */
+  .header-menu-btn {
+    color: #2F3A2F;
+  }
+
+  .header.scrolled .header-menu-btn {
+    color: #2B2B2B;
+  }
+
+  /* Mobile Menu */
+  .mobile-menu {
+    background: transparent;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 0 0 24px 24px;
+  }
+
+  .header.scrolled .mobile-menu {
+    border-radius: 0 0 16px 16px;
+  }
+
+  .mobile-nav-link {
+    color: #2F3A2F;
+  }
+
+  .mobile-nav-link:hover {
+    color: #7A8B6C;
+  }
+
+  .header.scrolled .mobile-nav-link {
+    color: #2B2B2B;
+  }
+
+  .header.scrolled .mobile-nav-link:hover {
+    color: #7A8B6C;
+  }
+
+  /* Hero Section Styles - УДАЛЕНЫ конфликтующие стили, используется inline Tailwind в HeroSection.tsx */
+
+  /* Header Glassmorphism улучшения */
+  .header {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: 
+      background 0.3s ease,
+      backdrop-filter 0.3s ease,
+      box-shadow 0.3s ease,
+      border-radius 0.3s ease,
+      padding 0.3s ease;
+  }
+
+  .header-container {
+    transition: padding 0.3s ease;
+  }
+
+  .header.scrolled {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .header.scrolled .header-container {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* Tablet styles - УДАЛЕНЫ конфликтующие hero-стили */
+
+  /* ---------- Desktop: snap ON only for the first block stack ---------- */
+  @media (min-width: 1024px) {
+    .snapWrap {
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+    }
+
+    .snapWrap > section {
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      /* критично: учитываем fixed header + его gap */
+      scroll-margin-top: var(--snap-offset-desktop);
+      /* чтобы "не торчал" следующий блок */
+      min-height: calc(100vh - var(--snap-offset-desktop));
+    }
+  }
+
+  /* ---------- Mobile/Tablet: snap OFF ---------- */
+  @media (max-width: 1023px) {
+    .snapWrap {
+      height: auto;
+      overflow: visible;
+      scroll-snap-type: none;
+      scroll-behavior: auto;
+    }
+
+    .snapWrap > section {
+      scroll-margin-top: var(--snap-offset-mobile);
+      min-height: 100svh; /* устойчиво для iOS */
+    }
+  }
+
+  /* Остальной контент всегда обычный */
+  .normalWrap {
+    height: auto;
+    overflow: visible;
+  }
+
+  /* Если у секций есть якоря/scrollTo — всем секциям можно дать margin-top */
+  .normalWrap > section,
+  .normalWrap > footer {
+    scroll-margin-top: var(--snap-offset-mobile);
+  }
+
+  @media (min-width: 1024px) {
+    .normalWrap > section,
+    .normalWrap > footer {
+      scroll-margin-top: var(--snap-offset-desktop);
+    }
+  }
+}
