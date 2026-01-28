@@ -98,7 +98,7 @@ def product_match_keyboard(products: list[Product]) -> InlineKeyboardMarkup:
 
 
 def product_actions_keyboard(product: Product) -> InlineKeyboardMarkup:
-    """Actions for a product card."""
+    """Actions for a product card (updated layout per plan)."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -106,19 +106,144 @@ def product_actions_keyboard(product: Product) -> InlineKeyboardMarkup:
                     text="📦 Приход", callback_data=f"product_intake_{product.row_number}"
                 ),
                 InlineKeyboardButton(
+                    text="➖ Списать", callback_data=f"product_writeoff_{product.row_number}"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🧮 Корректировка", callback_data=f"product_correction_{product.row_number}"
+                ),
+                InlineKeyboardButton(
+                    text="📷 Фото", callback_data=f"product_photo_{product.row_number}"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🗑️ Архив", callback_data=f"product_archive_{product.row_number}"
+                ),
+                InlineKeyboardButton(
+                    text="⋯ Ещё", callback_data=f"product_more_{product.row_number}"
+                ),
+            ],
+        ]
+    )
+
+
+def product_more_keyboard(product: Product) -> InlineKeyboardMarkup:
+    """Additional actions menu."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
                     text="✏️ Редактировать", callback_data=f"product_edit_{product.row_number}"
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="📷 Фото", callback_data=f"product_photo_{product.row_number}"
+                    text="⬅️ Назад", callback_data=f"product_back_{product.row_number}"
                 ),
+            ],
+        ]
+    )
+
+
+def writeoff_reason_keyboard() -> InlineKeyboardMarkup:
+    """Keyboard for selecting writeoff reason."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🗑️ Порча", callback_data="writeoff_reason_порча"),
+                InlineKeyboardButton(text="🎁 Подарок", callback_data="writeoff_reason_подарок"),
+            ],
+            [
+                InlineKeyboardButton(text="🔄 Пересорт", callback_data="writeoff_reason_пересорт"),
+                InlineKeyboardButton(text="📝 Другое", callback_data="writeoff_reason_другое"),
+            ],
+            [
+                InlineKeyboardButton(text="❌ Отмена", callback_data="cancel"),
+            ],
+        ]
+    )
+
+
+def correction_reason_keyboard() -> InlineKeyboardMarkup:
+    """Keyboard for selecting correction reason."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
                 InlineKeyboardButton(
-                    text="🗑️ Деактивировать"
-                    if product.active
-                    else "✅ Активировать",
-                    callback_data=f"product_toggle_{product.row_number}",
+                    text="📋 Инвентаризация", callback_data="correction_reason_инвентаризация"
                 ),
+            ],
+            [
+                InlineKeyboardButton(text="🔄 Пересорт", callback_data="correction_reason_пересорт"),
+                InlineKeyboardButton(
+                    text="⚠️ Ошибки учёта", callback_data="correction_reason_ошибки_учёта"
+                ),
+            ],
+            [
+                InlineKeyboardButton(text="📝 Другое", callback_data="correction_reason_другое"),
+            ],
+            [
+                InlineKeyboardButton(text="❌ Отмена", callback_data="cancel"),
+            ],
+        ]
+    )
+
+
+def archive_menu_keyboard(row_number: int) -> InlineKeyboardMarkup:
+    """Archive action selection menu."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🗑️ Архивировать (убрать из каталога)",
+                    callback_data=f"archive_simple_{row_number}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🧹 Обнулить остаток и архивировать",
+                    callback_data=f"archive_zero_{row_number}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(text="❌ Отмена", callback_data="cancel"),
+            ],
+        ]
+    )
+
+
+def over_stock_keyboard(row_number: int, available_stock: int) -> InlineKeyboardMarkup:
+    """Keyboard shown when writeoff qty exceeds stock."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"✅ Списать остаток ({available_stock})",
+                    callback_data=f"writeoff_all_{row_number}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🧮 Перейти в корректировку",
+                    callback_data=f"product_correction_{row_number}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(text="❌ Отмена", callback_data="cancel"),
+            ],
+        ]
+    )
+
+
+def stock_operation_result_keyboard() -> InlineKeyboardMarkup:
+    """Keyboard shown after successful stock operation."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="⬅️ К товару", callback_data="back_to_product"),
+                InlineKeyboardButton(text="🔎 Поиск", callback_data="start_search"),
             ],
         ]
     )

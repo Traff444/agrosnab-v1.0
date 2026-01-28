@@ -2,6 +2,7 @@
 
 import logging
 import secrets
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -10,6 +11,17 @@ from googleapiclient.discovery import build
 
 from app.config import get_settings
 from app.models import Product
+
+
+@dataclass
+class StockOperationResult:
+    """Result of a stock operation (writeoff, correction, archive)."""
+
+    ok: bool
+    stock_before: int
+    stock_after: int
+    operation_id: str
+    error: str | None = None
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +40,16 @@ COL_ALIASES = {
     "Фото": "Фото_URL",
 }
 
+# Log sheet columns (unified format for Списание/Внесение)
+LOG_COLUMNS = [
+    "date", "operation_id", "sku", "name", "qty",
+    "stock_before", "stock_after", "reason", "source",
+    "actor_id", "actor_username", "note"
+]
+
+# Deduplication lookback rows
+DEDUP_LOOKBACK_ROWS = 200
+
 
 class SheetsClient:
     """Google Sheets client with dynamic column mapping."""
@@ -37,6 +59,7 @@ class SheetsClient:
         self._col_map: dict[str, int] = {}
         self._headers: list[str] = []
         self._sheet_name = "Склад"
+        self._log_col_map_cache: dict[str, dict[str, int]] = {}  # {sheet_name: col_map}
 
     def _get_credentials(self) -> Credentials:
         """Get Google credentials from settings."""
@@ -378,6 +401,585 @@ class SheetsClient:
             last_intake_at=product.last_intake_at,
             last_intake_qty=product.last_intake_qty,
             last_updated_by=updated_by,
+        )
+
+    # -------------------------------------------------------------------------
+    # Product by Row
+    # -------------------------------------------------------------------------
+
+    async def get_product_by_row(self, row_number: int) -> Product | None:
+        """Get product by row number."""
+        settings = get_settings()
+
+        # Read the specific row
+        result = (
+            self.service.spreadsheets()
+            .values()
+            .get(
+                spreadsheetId=settings.google_sheets_id,
+                range=f"{self._sheet_name}!A{row_number}:Z{row_number}",
+            )
+            .execute()
+        )
+
+        rows = result.get("values", [])
+        if not rows or not rows[0]:
+            return None
+
+        row_data = self._row_to_dict(rows[0])
+        if not row_data.get("SKU"):
+            return None
+
+        return Product.from_row(row_number, row_data, self._col_map)
+
+    # -------------------------------------------------------------------------
+    # Log Sheet Self-Heal Methods
+    # -------------------------------------------------------------------------
+
+    async def _ensure_sheet_exists(self, sheet_name: str) -> bool:
+        """Ensure a sheet exists, create if missing. Returns True on success."""
+        settings = get_settings()
+
+        # Get list of sheets
+        result = (
+            self.service.spreadsheets()
+            .get(spreadsheetId=settings.google_sheets_id)
+            .execute()
+        )
+
+        sheets = [s["properties"]["title"] for s in result.get("sheets", [])]
+
+        if sheet_name in sheets:
+            return True
+
+        # Create the sheet
+        self.service.spreadsheets().batchUpdate(
+            spreadsheetId=settings.google_sheets_id,
+            body={
+                "requests": [
+                    {"addSheet": {"properties": {"title": sheet_name}}}
+                ]
+            },
+        ).execute()
+
+        return True
+
+    async def ensure_log_columns(self, sheet_name: str) -> dict[str, int]:
+        """
+        Ensure log sheet has all required columns (self-heal).
+        Returns column mapping {col_name: index}.
+        Cached until clear_log_column_cache is called.
+        """
+        # Return cached if available
+        if sheet_name in self._log_col_map_cache:
+            return self._log_col_map_cache[sheet_name]
+
+        settings = get_settings()
+
+        # Ensure sheet exists
+        await self._ensure_sheet_exists(sheet_name)
+
+        # Read header row
+        result = (
+            self.service.spreadsheets()
+            .values()
+            .get(
+                spreadsheetId=settings.google_sheets_id,
+                range=f"{sheet_name}!1:1",
+            )
+            .execute()
+        )
+
+        existing_headers = result.get("values", [[]])[0] if result.get("values") else []
+
+        # Build col_map from existing
+        col_map = {header: idx for idx, header in enumerate(existing_headers)}
+
+        # Find missing columns
+        missing = [col for col in LOG_COLUMNS if col not in col_map]
+
+        if missing:
+            if not existing_headers:
+                # Empty sheet - write all columns to A1
+                self.service.spreadsheets().values().update(
+                    spreadsheetId=settings.google_sheets_id,
+                    range=f"{sheet_name}!A1",
+                    valueInputOption="RAW",
+                    body={"values": [LOG_COLUMNS]},
+                ).execute()
+                col_map = {col: idx for idx, col in enumerate(LOG_COLUMNS)}
+            else:
+                # Add missing columns to the end
+                start_col = self._col_letter(len(existing_headers))
+                self.service.spreadsheets().values().update(
+                    spreadsheetId=settings.google_sheets_id,
+                    range=f"{sheet_name}!{start_col}1",
+                    valueInputOption="RAW",
+                    body={"values": [missing]},
+                ).execute()
+
+                # Update col_map with new columns
+                for i, col in enumerate(missing):
+                    col_map[col] = len(existing_headers) + i
+
+        # Cache and return
+        self._log_col_map_cache[sheet_name] = col_map
+        return col_map
+
+    def clear_log_column_cache(self, sheet_name: str) -> None:
+        """Clear cached column mapping for a log sheet."""
+        self._log_col_map_cache.pop(sheet_name, None)
+
+    async def _check_operation_exists(
+        self, sheet_name: str, operation_id: str
+    ) -> bool:
+        """Check if operation_id exists in recent rows (deduplication)."""
+        settings = get_settings()
+
+        # Read last N rows (operation_id is in column B = index 1)
+        result = (
+            self.service.spreadsheets()
+            .values()
+            .get(
+                spreadsheetId=settings.google_sheets_id,
+                range=f"{sheet_name}!A2:C{DEDUP_LOOKBACK_ROWS + 1}",
+            )
+            .execute()
+        )
+
+        rows = result.get("values", [])
+        for row in rows:
+            if len(row) > 1 and row[1] == operation_id:
+                return True
+
+        return False
+
+    # -------------------------------------------------------------------------
+    # Log Entry Methods
+    # -------------------------------------------------------------------------
+
+    async def append_log_entry(
+        self,
+        sheet_name: str,
+        sku: str,
+        name: str,
+        qty: int,
+        stock_before: int,
+        stock_after: int,
+        reason: str,
+        source: str,
+        actor_id: int,
+        actor_username: str,
+        operation_id: str,
+        note: str = "",
+    ) -> bool:
+        """Append a log entry to the specified sheet. Returns True on success."""
+        settings = get_settings()
+
+        # Ensure columns exist
+        col_map = await self.ensure_log_columns(sheet_name)
+
+        # Build row based on column positions
+        row_data = [""] * len(col_map)
+        row_data[col_map["date"]] = datetime.now().isoformat()
+        row_data[col_map["operation_id"]] = operation_id
+        row_data[col_map["sku"]] = sku
+        row_data[col_map["name"]] = name
+        row_data[col_map["qty"]] = qty
+        row_data[col_map["stock_before"]] = stock_before
+        row_data[col_map["stock_after"]] = stock_after
+        row_data[col_map["reason"]] = reason
+        row_data[col_map["source"]] = source
+        row_data[col_map["actor_id"]] = actor_id
+        row_data[col_map["actor_username"]] = actor_username
+        row_data[col_map["note"]] = note
+
+        try:
+            self.service.spreadsheets().values().append(
+                spreadsheetId=settings.google_sheets_id,
+                range=f"{sheet_name}!A:A",
+                valueInputOption="USER_ENTERED",
+                insertDataOption="INSERT_ROWS",
+                body={"values": [row_data]},
+            ).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to append log entry to {sheet_name}: {e}")
+            return False
+
+    async def _increment_total_column(
+        self, row_number: int, column_name: str, delta: int
+    ) -> None:
+        """Increment a total column (e.g., Списано_всего) by delta."""
+        if column_name not in self._col_map:
+            return  # Column doesn't exist, skip
+
+        settings = get_settings()
+        col_letter = self._col_letter(self._col_map[column_name])
+
+        # Read current value
+        result = (
+            self.service.spreadsheets()
+            .values()
+            .get(
+                spreadsheetId=settings.google_sheets_id,
+                range=f"{self._sheet_name}!{col_letter}{row_number}",
+            )
+            .execute()
+        )
+
+        current_value = 0
+        values = result.get("values", [[]])
+        if values and values[0]:
+            try:
+                current_value = int(values[0][0] or 0)
+            except (ValueError, TypeError):
+                current_value = 0
+
+        new_value = current_value + delta
+
+        # Update
+        self.service.spreadsheets().values().update(
+            spreadsheetId=settings.google_sheets_id,
+            range=f"{self._sheet_name}!{col_letter}{row_number}",
+            valueInputOption="USER_ENTERED",
+            body={"values": [[new_value]]},
+        ).execute()
+
+    # -------------------------------------------------------------------------
+    # Stock Operations
+    # -------------------------------------------------------------------------
+
+    async def apply_writeoff(
+        self,
+        row_number: int,
+        qty: int,
+        reason: str,
+        actor_id: int,
+        actor_username: str,
+        note: str = "",
+        operation_id: str | None = None,
+    ) -> StockOperationResult:
+        """
+        Apply writeoff: decrease stock and log to 'Списание'.
+        Returns StockOperationResult.
+        """
+        # Generate operation_id if not provided
+        if operation_id is None:
+            operation_id = secrets.token_hex(8)
+
+        # Validate qty
+        if qty <= 0:
+            return StockOperationResult(
+                ok=False,
+                stock_before=0,
+                stock_after=0,
+                operation_id=operation_id,
+                error="Количество должно быть больше 0",
+            )
+
+        # Get product
+        product = await self.get_product_by_row(row_number)
+        if not product:
+            return StockOperationResult(
+                ok=False,
+                stock_before=0,
+                stock_after=0,
+                operation_id=operation_id,
+                error="Товар не найден",
+            )
+
+        stock_before = product.stock
+
+        # Validate qty <= stock
+        if qty > stock_before:
+            return StockOperationResult(
+                ok=False,
+                stock_before=stock_before,
+                stock_after=stock_before,
+                operation_id=operation_id,
+                error=f"Недостаточно товара. Остаток: {stock_before}",
+            )
+
+        stock_after = stock_before - qty
+
+        # Check for duplicate operation (deduplication)
+        col_map = await self.ensure_log_columns("Списание")
+        if await self._check_operation_exists("Списание", operation_id):
+            # Already logged, just update stock and return success
+            await self.update_product_stock(product, -qty, f"tg:{actor_username}")
+            await self._increment_total_column(row_number, "Списано_всего", qty)
+            return StockOperationResult(
+                ok=True,
+                stock_before=stock_before,
+                stock_after=stock_after,
+                operation_id=operation_id,
+            )
+
+        # Append log entry
+        log_success = await self.append_log_entry(
+            sheet_name="Списание",
+            sku=product.sku,
+            name=product.name,
+            qty=qty,
+            stock_before=stock_before,
+            stock_after=stock_after,
+            reason=reason,
+            source="owner_manual",
+            actor_id=actor_id,
+            actor_username=actor_username,
+            operation_id=operation_id,
+            note=note or "pending_stock_update",
+        )
+
+        if not log_success:
+            return StockOperationResult(
+                ok=False,
+                stock_before=stock_before,
+                stock_after=stock_before,
+                operation_id=operation_id,
+                error="Не удалось записать в журнал",
+            )
+
+        # Update stock
+        try:
+            await self.update_product_stock(product, -qty, f"tg:{actor_username}")
+            await self._increment_total_column(row_number, "Списано_всего", qty)
+        except Exception as e:
+            logger.error(f"Failed to update stock after writeoff log: {e}")
+            return StockOperationResult(
+                ok=False,
+                stock_before=stock_before,
+                stock_after=stock_before,
+                operation_id=operation_id,
+                error=f"Запись в журнал создана, но обновление остатка не удалось: {e}",
+            )
+
+        return StockOperationResult(
+            ok=True,
+            stock_before=stock_before,
+            stock_after=stock_after,
+            operation_id=operation_id,
+        )
+
+    async def apply_correction(
+        self,
+        row_number: int,
+        new_stock: int,
+        reason: str,
+        actor_id: int,
+        actor_username: str,
+        operation_id: str | None = None,
+    ) -> StockOperationResult:
+        """
+        Apply stock correction.
+        delta < 0: log to 'Списание' (source=owner_correction)
+        delta > 0: log to 'Внесение' (source=owner_correction)
+        delta == 0: no log, just return ok
+        """
+        # Generate operation_id if not provided
+        if operation_id is None:
+            operation_id = secrets.token_hex(8)
+
+        # Validate new_stock
+        if new_stock < 0:
+            return StockOperationResult(
+                ok=False,
+                stock_before=0,
+                stock_after=0,
+                operation_id=operation_id,
+                error="Остаток не может быть отрицательным",
+            )
+
+        # Get product
+        product = await self.get_product_by_row(row_number)
+        if not product:
+            return StockOperationResult(
+                ok=False,
+                stock_before=0,
+                stock_after=0,
+                operation_id=operation_id,
+                error="Товар не найден",
+            )
+
+        stock_before = product.stock
+        delta = new_stock - stock_before
+
+        # No change
+        if delta == 0:
+            return StockOperationResult(
+                ok=True,
+                stock_before=stock_before,
+                stock_after=new_stock,
+                operation_id=operation_id,
+            )
+
+        # Determine sheet and qty
+        if delta < 0:
+            sheet_name = "Списание"
+            qty = abs(delta)
+            total_column = "Списано_всего"
+        else:
+            sheet_name = "Внесение"
+            qty = delta
+            total_column = "Внесено_всего"
+
+        # Append log entry
+        log_success = await self.append_log_entry(
+            sheet_name=sheet_name,
+            sku=product.sku,
+            name=product.name,
+            qty=qty,
+            stock_before=stock_before,
+            stock_after=new_stock,
+            reason=f"correction:{reason}",
+            source="owner_correction",
+            actor_id=actor_id,
+            actor_username=actor_username,
+            operation_id=operation_id,
+            note="",
+        )
+
+        if not log_success:
+            return StockOperationResult(
+                ok=False,
+                stock_before=stock_before,
+                stock_after=stock_before,
+                operation_id=operation_id,
+                error="Не удалось записать в журнал",
+            )
+
+        # Update stock
+        try:
+            await self.update_product_stock(product, delta, f"tg:{actor_username}")
+            await self._increment_total_column(row_number, total_column, qty)
+        except Exception as e:
+            logger.error(f"Failed to update stock after correction log: {e}")
+            return StockOperationResult(
+                ok=False,
+                stock_before=stock_before,
+                stock_after=stock_before,
+                operation_id=operation_id,
+                error=f"Запись в журнал создана, но обновление остатка не удалось: {e}",
+            )
+
+        return StockOperationResult(
+            ok=True,
+            stock_before=stock_before,
+            stock_after=new_stock,
+            operation_id=operation_id,
+        )
+
+    async def apply_archive_zero_out(
+        self,
+        row_number: int,
+        actor_id: int,
+        actor_username: str,
+        operation_id: str | None = None,
+    ) -> StockOperationResult:
+        """
+        Archive with zero out: writeoff remaining stock + deactivate.
+        If stock == 0, just deactivate.
+        """
+        # Generate operation_id if not provided
+        if operation_id is None:
+            operation_id = secrets.token_hex(8)
+
+        # Get product
+        product = await self.get_product_by_row(row_number)
+        if not product:
+            return StockOperationResult(
+                ok=False,
+                stock_before=0,
+                stock_after=0,
+                operation_id=operation_id,
+                error="Товар не найден",
+            )
+
+        stock_before = product.stock
+
+        # If has stock, writeoff first
+        if stock_before > 0:
+            # Append log entry
+            log_success = await self.append_log_entry(
+                sheet_name="Списание",
+                sku=product.sku,
+                name=product.name,
+                qty=stock_before,
+                stock_before=stock_before,
+                stock_after=0,
+                reason="archive:zero_out",
+                source="owner_manual",
+                actor_id=actor_id,
+                actor_username=actor_username,
+                operation_id=operation_id,
+                note="",
+            )
+
+            if not log_success:
+                return StockOperationResult(
+                    ok=False,
+                    stock_before=stock_before,
+                    stock_after=stock_before,
+                    operation_id=operation_id,
+                    error="Не удалось записать в журнал",
+                )
+
+            # Update stock to 0
+            try:
+                await self.update_product_stock(
+                    product, -stock_before, f"tg:{actor_username}"
+                )
+                await self._increment_total_column(
+                    row_number, "Списано_всего", stock_before
+                )
+            except Exception as e:
+                logger.error(f"Failed to zero out stock: {e}")
+                return StockOperationResult(
+                    ok=False,
+                    stock_before=stock_before,
+                    stock_after=stock_before,
+                    operation_id=operation_id,
+                    error=f"Не удалось обнулить остаток: {e}",
+                )
+
+        # Deactivate product
+        try:
+            # Need to refresh product after stock update
+            updated_product = Product(
+                row_number=product.row_number,
+                sku=product.sku,
+                name=product.name,
+                price=product.price,
+                stock=0,
+                photo_url=product.photo_url,
+                description=product.description,
+                tags=product.tags,
+                active=product.active,
+                last_intake_at=product.last_intake_at,
+                last_intake_qty=product.last_intake_qty,
+                last_updated_by=product.last_updated_by,
+            )
+            await self.update_product_active(
+                product=updated_product,
+                active=False,
+                updated_by=f"tg:{actor_username}",
+            )
+        except Exception as e:
+            logger.error(f"Failed to deactivate product: {e}")
+            return StockOperationResult(
+                ok=False,
+                stock_before=stock_before,
+                stock_after=0,
+                operation_id=operation_id,
+                error=f"Не удалось деактивировать товар: {e}",
+            )
+
+        return StockOperationResult(
+            ok=True,
+            stock_before=stock_before,
+            stock_after=0,
+            operation_id=operation_id,
         )
 
     async def test_connection(self) -> dict[str, Any]:
