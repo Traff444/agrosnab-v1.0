@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ProductCard } from './components/ProductCard';
 import { HeroSection } from './components/HeroSection';
 import { CountUp } from './components/CountUp';
+import { fetchCatalog, Product } from './lib/catalog';
 import {
   CheckCircle2,
   Package,
@@ -16,37 +17,33 @@ import {
   Shield,
   Leaf,
   ArrowRight,
-  ChevronDown
+  ChevronDown,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 
 function App() {
   const [showAllProducts, setShowAllProducts] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const productCoverImages = [
-    `${import.meta.env.BASE_URL}tovar1.webp`,
-    `${import.meta.env.BASE_URL}tovar2.webp`,
-    `${import.meta.env.BASE_URL}tovar3.webp`,
-    `${import.meta.env.BASE_URL}tovar4.webp`,
-    `${import.meta.env.BASE_URL}tovar5.webp`,
-    `${import.meta.env.BASE_URL}tovar6.webp`,
-    `${import.meta.env.BASE_URL}tovar7.webp`,
-    `${import.meta.env.BASE_URL}tovar8.webp`,
-    `${import.meta.env.BASE_URL}tovar9.webp`,
-  ];
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetchCatalog()
+      .then((res) => {
+        if (res.error) {
+          setError(res.error);
+        }
+        setProducts(res.items);
+      })
+      .catch(() => setError('Каталог временно недоступен'))
+      .finally(() => setLoading(false));
+  }, [reloadKey]);
 
-  const products = [
-    { name: 'Махорка "Крымская" Крым', weight: '40г' },
-    { name: 'Махорка Берли Classic', weight: '50 кг' },
-    { name: 'Махорка "Золотая" Россия', weight: '40г' },
-    { name: 'Махорка "СССР" Россия', weight: '50г' },
-    { name: 'Махорка Крым', weight: '40гр' },
-    { name: 'Махорка Крым', weight: '100гр' },
-    { name: 'Махорка Аргентина', weight: '40г' },
-    { name: 'Махорка Индия', weight: '100г' },
-  ].map((p, idx) => ({
-    ...p,
-    imageUrl: productCoverImages[idx % productCoverImages.length],
-  }));
+  const handleRetry = () => setReloadKey((k) => k + 1);
 
   const visibleProducts = showAllProducts ? products : products.slice(0, 6);
 
@@ -101,37 +98,68 @@ function App() {
             Широкий выбор сортов сельскохозяйственного сырья с гибкими условиями поставки
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-            {visibleProducts.map((product, index) => (
-              <ProductCard key={index} {...product} />
-            ))}
-          </div>
+          {/* Loading state */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="w-10 h-10 text-white animate-spin mb-4" />
+              <p className="text-subtext-on-dark">Загрузка каталога...</p>
+            </div>
+          )}
 
-          <div className="text-center">
-            {!showAllProducts ? (
+          {/* Error state */}
+          {!loading && error && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <p className="text-white mb-4">{error}</p>
               <button
-                onClick={() => {
-                  setShowAllProducts(true);
-                  window.open('https://t.me/agrosna1b_bot', '_blank', 'noopener,noreferrer');
-                }}
-                className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white/10 transition-colors px-6 py-2.5 md:px-8 md:py-3 rounded-lg font-medium text-sm md:text-base"
+                onClick={handleRetry}
+                className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white/10 transition-colors px-6 py-2.5 rounded-lg font-medium text-sm"
               >
-                Показать весь ассортимент
-                <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+                <RefreshCw className="w-4 h-4" />
+                Попробовать снова
               </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setShowAllProducts(false);
-                  window.open('https://t.me/agrosna1b_bot', '_blank', 'noopener,noreferrer');
-                }}
-                className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white/10 transition-colors px-6 py-2.5 md:px-8 md:py-3 rounded-lg font-medium text-sm md:text-base"
-              >
-                Свернуть ассортимент
-                <ChevronDown className="w-4 h-4 md:w-5 md:h-5 rotate-180" />
-              </button>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && !error && products.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Package className="w-12 h-12 text-white/50 mb-4" />
+              <p className="text-subtext-on-dark">Товары скоро появятся</p>
+            </div>
+          )}
+
+          {/* Products grid */}
+          {!loading && !error && products.length > 0 && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+                {visibleProducts.map((product) => (
+                  <ProductCard key={product.sku} product={product} />
+                ))}
+              </div>
+
+              {products.length > 6 && (
+                <div className="text-center">
+                  {!showAllProducts ? (
+                    <button
+                      onClick={() => setShowAllProducts(true)}
+                      className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white/10 transition-colors px-6 py-2.5 md:px-8 md:py-3 rounded-lg font-medium text-sm md:text-base"
+                    >
+                      Показать весь ассортимент ({products.length - 6} ещё)
+                      <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowAllProducts(false)}
+                      className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white/10 transition-colors px-6 py-2.5 md:px-8 md:py-3 rounded-lg font-medium text-sm md:text-base"
+                    >
+                      Свернуть ассортимент
+                      <ChevronDown className="w-4 h-4 md:w-5 md:h-5 rotate-180" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </section>
 
