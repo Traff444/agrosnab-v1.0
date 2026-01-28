@@ -1,0 +1,18 @@
+services:
+  owner-bot:
+    build: .
+    container_name: owner-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./tmp:/app/tmp
+      - ./data:/app/data
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ["CMD", "python", "-c", "from app.sheets import sheets_client; import asyncio; asyncio.run(sheets_client.test_connection())"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 30s

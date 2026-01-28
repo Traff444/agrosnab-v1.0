@@ -1,0 +1,29 @@
+# Secrets / env
+.env
+.env.*
+secrets/
+
+# Runtime data
+/data/
+*.sqlite3
+*.db
+*.pdf
+
+# Local Python tooling
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# VCS / editor
+.git/
+.vscode/
+
+# Docs / samples (not needed to build runtime image)
+DOCUMENTATION.md
+PRESENTATION.md
+telegram_bot.xlsx
+meta-origin-*.json
+
+tests/

@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+
+# Test / tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Secrets (keep README)
+secrets/*
+!secrets/README.txt
+!secrets/.gitkeep
+
+# Runtime data (keep optional placeholders)
+data/*
+!data/.gitkeep
+!data/README.txt
+
+# SQLite / local state
+*.sqlite3
+*.db
+
+# Invoices / generated files
+*.pdf
+
+# Misc local artifacts
+meta-origin-*.json
+
+# OpenMemory - IDE/Assistant specific rules
+.cursor/rules/openmemory.mdc

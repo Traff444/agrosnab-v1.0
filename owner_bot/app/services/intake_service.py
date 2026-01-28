@@ -1,0 +1,264 @@
+"""Intake session service."""
+
+import os
+from pathlib import Path
+from dataclasses import dataclass
+from datetime import datetime
+
+from app.config import get_settings
+from app.models import (
+    IntakeSession,
+    Product,
+    ParsedIntake,
+    PhotoQualityResult,
+    DriveUploadResult,
+)
+from app.sheets import sheets_client
+from app.drive import drive_client
+from app.intake_parser import parse_intake_string
+from app.photo_quality import analyze_photo
+from app.photo_enhance import enhance_photo
+
+
+@dataclass
+class IntakeResult:
+    """Result of completing an intake."""
+
+    success: bool
+    product: Product | None = None
+    is_new: bool = False
+    error: str | None = None
+    photo_uploaded: bool = False
+    photo_permissions_ok: bool = True
+
+
+class IntakeService:
+    """Service for managing intake sessions."""
+
+    def __init__(self):
+        self._sessions: dict[int, IntakeSession] = {}
+
+    def get_session(self, user_id: int) -> IntakeSession | None:
+        """Get active session for user."""
+        return self._sessions.get(user_id)
+
+    def create_session(self, user_id: int) -> IntakeSession:
+        """Create new intake session."""
+        session = IntakeSession(user_id=user_id)
+        self._sessions[user_id] = session
+        return session
+
+    def clear_session(self, user_id: int) -> None:
+        """Clear user's intake session."""
+        if user_id in self._sessions:
+            del self._sessions[user_id]
+
+    def parse_quick_string(self, text: str) -> ParsedIntake:
+        """Parse quick intake string."""
+        return parse_intake_string(text)
+
+    def update_session_from_parsed(
+        self,
+        session: IntakeSession,
+        parsed: ParsedIntake,
+    ) -> IntakeSession:
+        """Update session with parsed data."""
+        if parsed.name:
+            session.name = parsed.name
+        if parsed.price is not None:
+            session.price = parsed.price
+        if parsed.quantity is not None:
+            session.quantity = parsed.quantity
+        return session
+
+    async def find_matching_products(self, name: str) -> list[Product]:
+        """Find products matching the name."""
+        return await sheets_client.search_products(name, limit=5)
+
+    def set_existing_product(
+        self,
+        session: IntakeSession,
+        product: Product,
+    ) -> IntakeSession:
+        """Set session to update existing product."""
+        session.existing_product = product
+        session.is_new_product = False
+        session.sku = product.sku
+        # Keep session price/quantity, use product name
+        if not session.name:
+            session.name = product.name
+        return session
+
+    def set_new_product(self, session: IntakeSession) -> IntakeSession:
+        """Set session to create new product."""
+        session.existing_product = None
+        session.is_new_product = True
+        session.sku = None
+        return session
+
+    async def download_and_analyze_photo(
+        self,
+        session: IntakeSession,
+        file_path: str,
+    ) -> PhotoQualityResult:
+        """Analyze downloaded photo."""
+        result = analyze_photo(file_path)
+        session.photo_quality = result
+        return result
+
+    async def enhance_photo(self, file_path: str) -> str:
+        """Enhance photo and return new path."""
+        result = enhance_photo(file_path)
+        return result.path
+
+    async def upload_photo(
+        self,
+        session: IntakeSession,
+        file_path: str,
+    ) -> DriveUploadResult:
+        """Upload photo to Drive."""
+        settings = get_settings()
+
+        # Generate filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        sku_part = session.sku or "new"
+        filename = f"{sku_part}_{timestamp}.jpg"
+
+        result = await drive_client.upload_photo(file_path, filename)
+
+        session.drive_file_id = result.file_id
+        session.drive_url = result.public_url
+
+        return result
+
+    async def complete_intake(
+        self,
+        session: IntakeSession,
+        updated_by: str = "owner_bot",
+    ) -> IntakeResult:
+        """Complete the intake session."""
+        if session.is_new_product:
+            return await self._create_new_product(session, updated_by)
+        else:
+            return await self._update_existing_product(session, updated_by)
+
+    async def _create_new_product(
+        self,
+        session: IntakeSession,
+        updated_by: str,
+    ) -> IntakeResult:
+        """Create new product from session."""
+        if not session.name or session.price is None or session.quantity is None:
+            return IntakeResult(
+                success=False,
+                error="Не заполнены обязательные поля: название, цена, количество",
+            )
+
+        try:
+            product = await sheets_client.create_product(
+                name=session.name,
+                price=session.price,
+                quantity=session.quantity,
+                photo_url=session.drive_url or "",
+                updated_by=updated_by,
+            )
+
+            return IntakeResult(
+                success=True,
+                product=product,
+                is_new=True,
+                photo_uploaded=bool(session.drive_url),
+            )
+        except Exception as e:
+            return IntakeResult(
+                success=False,
+                error=f"Ошибка создания товара: {e}",
+            )
+
+    async def _update_existing_product(
+        self,
+        session: IntakeSession,
+        updated_by: str,
+    ) -> IntakeResult:
+        """Update existing product from session."""
+        if not session.existing_product:
+            return IntakeResult(
+                success=False,
+                error="Товар не выбран",
+            )
+
+        if session.quantity is None:
+            return IntakeResult(
+                success=False,
+                error="Не указано количество",
+            )
+
+        try:
+            # Update stock
+            product = await sheets_client.update_product_stock(
+                product=session.existing_product,
+                quantity_delta=session.quantity,
+                updated_by=updated_by,
+            )
+
+            # Update photo if provided
+            photo_permissions_ok = True
+            if session.drive_url:
+                product = await sheets_client.update_product_photo(
+                    product=product,
+                    photo_url=session.drive_url,
+                    updated_by=updated_by,
+                )
+
+            return IntakeResult(
+                success=True,
+                product=product,
+                is_new=False,
+                photo_uploaded=bool(session.drive_url),
+                photo_permissions_ok=photo_permissions_ok,
+            )
+        except Exception as e:
+            return IntakeResult(
+                success=False,
+                error=f"Ошибка обновления товара: {e}",
+            )
+
+    def format_session_preview(self, session: IntakeSession) -> str:
+        """Format session as preview card."""
+        lines = ["📋 **Предпросмотр прихода**", ""]
+
+        if session.is_new_product:
+            lines.append("🆕 **Новый товар**")
+        else:
+            lines.append("📦 **Обновление существующего**")
+            if session.existing_product:
+                lines.append(f"SKU: `{session.existing_product.sku}`")
+
+        lines.append("")
+
+        if session.name:
+            lines.append(f"📦 Название: {session.name}")
+        if session.price is not None:
+            lines.append(f"💰 Цена: {session.price:.2f} ₽")
+        if session.quantity is not None:
+            lines.append(f"📊 Количество: +{session.quantity} шт.")
+
+        if session.existing_product and session.quantity:
+            old_stock = session.existing_product.stock
+            new_stock = old_stock + session.quantity
+            lines.append(f"📈 Остаток: {old_stock} → {new_stock}")
+
+        if session.drive_url:
+            lines.append("📷 Фото: загружено")
+        else:
+            lines.append("📷 Фото: нет")
+
+        return "\n".join(lines)
+
+    def compute_fingerprint(self, session: IntakeSession) -> str:
+        """Compute idempotency fingerprint."""
+        return session.compute_fingerprint()
+
+
+# Global service instance
+intake_service = IntakeService()
