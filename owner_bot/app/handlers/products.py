@@ -343,7 +343,7 @@ async def process_writeoff_qty(message: Message, state: FSMContext) -> None:
     # If reason provided, go to confirmation
     if reason:
         await state.update_data(reason=reason)
-        await _show_writeoff_preview(message, state)
+        await _show_writeoff_preview(message, state, message.from_user.id)
     else:
         # Ask for reason
         await state.set_state(StockOperationState.writeoff_reason)
@@ -399,7 +399,7 @@ async def process_writeoff_reason(callback: CallbackQuery, state: FSMContext) ->
         return
 
     await state.update_data(reason=reason)
-    await _show_writeoff_preview(callback.message, state)
+    await _show_writeoff_preview(callback.message, state, callback.from_user.id)
 
 
 @router.message(StockOperationState.writeoff_reason, F.text, ~F.text.startswith("/"))
@@ -412,10 +412,10 @@ async def process_writeoff_reason_text(message: Message, state: FSMContext) -> N
 
     reason = message.text.strip()[:100]  # Limit length
     await state.update_data(reason=reason)
-    await _show_writeoff_preview(message, state)
+    await _show_writeoff_preview(message, state, message.from_user.id)
 
 
-async def _show_writeoff_preview(message: Message, state: FSMContext) -> None:
+async def _show_writeoff_preview(message: Message, state: FSMContext, user_id: int) -> None:
     """Show writeoff preview and request confirmation."""
     data = await state.get_data()
     row_number = data["row_number"]
@@ -460,7 +460,7 @@ async def _show_writeoff_preview(message: Message, state: FSMContext) -> None:
             "stock_before": stock_before,
             "operation_id": data["operation_id"],
         },
-        owner_id=message.from_user.id if message.from_user else 0,
+        owner_id=user_id,
         ttl_seconds=300,
     )
 
@@ -587,7 +587,7 @@ async def process_correction_reason(
         return
 
     await state.update_data(reason=reason)
-    await _show_correction_preview(callback.message, state)
+    await _show_correction_preview(callback.message, state, callback.from_user.id)
 
 
 @router.message(
@@ -602,10 +602,10 @@ async def process_correction_reason_text(message: Message, state: FSMContext) ->
 
     reason = message.text.strip()[:100]
     await state.update_data(reason=reason)
-    await _show_correction_preview(message, state)
+    await _show_correction_preview(message, state, message.from_user.id)
 
 
-async def _show_correction_preview(message: Message, state: FSMContext) -> None:
+async def _show_correction_preview(message: Message, state: FSMContext, user_id: int) -> None:
     """Show correction preview and request confirmation."""
     data = await state.get_data()
     row_number = data["row_number"]
@@ -640,7 +640,7 @@ async def _show_correction_preview(message: Message, state: FSMContext) -> None:
             "stock_before": stock_before,
             "operation_id": data["operation_id"],
         },
-        owner_id=message.from_user.id if message.from_user else 0,
+        owner_id=user_id,
         ttl_seconds=300,
     )
 

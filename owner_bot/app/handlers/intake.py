@@ -64,7 +64,7 @@ async def start_intake(message: Message, state: FSMContext) -> None:
     )
 
 
-@router.message(IntakeState.waiting_for_input, F.text, ~F.text.startswith("/"))
+@router.message(IntakeState.waiting_for_input, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
 async def process_input(message: Message, state: FSMContext) -> None:
     """Process initial input (quick string or name)."""
     if not message.from_user or not message.text:
@@ -98,7 +98,7 @@ async def process_input(message: Message, state: FSMContext) -> None:
             await _check_matching_products(message, state, session)
 
 
-@router.message(IntakeState.waiting_for_name, F.text, ~F.text.startswith("/"))
+@router.message(IntakeState.waiting_for_name, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
 async def process_name(message: Message, state: FSMContext) -> None:
     """Process product name input."""
     if not message.from_user or not message.text:
@@ -121,7 +121,7 @@ async def process_name(message: Message, state: FSMContext) -> None:
         await _check_matching_products(message, state, session)
 
 
-@router.message(IntakeState.waiting_for_price, F.text, ~F.text.startswith("/"))
+@router.message(IntakeState.waiting_for_price, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
 async def process_price(message: Message, state: FSMContext) -> None:
     """Process price input."""
     if not message.from_user or not message.text:
@@ -148,7 +148,7 @@ async def process_price(message: Message, state: FSMContext) -> None:
         await _check_matching_products(message, state, session)
 
 
-@router.message(IntakeState.waiting_for_quantity, F.text, ~F.text.startswith("/"))
+@router.message(IntakeState.waiting_for_quantity, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
 async def process_quantity(message: Message, state: FSMContext) -> None:
     """Process quantity input."""
     if not message.from_user or not message.text:
@@ -385,10 +385,19 @@ async def _show_preview(message: Message, state: FSMContext, session) -> None:
     preview = intake_service.format_session_preview(session)
 
     await state.set_state(IntakeState.preview_confirm)
-    await message.answer(
-        preview + "\n\n**Подтвердить приход?**",
-        reply_markup=confirm_cancel_keyboard(),
-    )
+
+    # Если есть фото - отправить с caption
+    if session.drive_url:
+        await message.answer_photo(
+            photo=session.drive_url,
+            caption=preview + "\n\n**Подтвердить приход?**",
+            reply_markup=confirm_cancel_keyboard(),
+        )
+    else:
+        await message.answer(
+            preview + "\n\n**Подтвердить приход?**",
+            reply_markup=confirm_cancel_keyboard(),
+        )
 
 
 @router.callback_query(IntakeState.preview_confirm)
