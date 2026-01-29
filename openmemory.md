@@ -36,5 +36,16 @@
   - Доставка сохраняется строкой: `ПВЗ СДЭК: <адрес> (<код>)`
 - **Env vars** (optional): `CDEK_CLIENT_ID`, `CDEK_CLIENT_SECRET`, `CDEK_TEST_MODE`, `CDEK_DEMO_MODE`
 
+## Frontend (sitemahorkaproject/)
+- Проект: Vite + React + TypeScript + TailwindCSS (лендинг).
+- Основной рендер: `src/main.tsx` → `src/App.tsx`.
+- Деплой Netlify: https://agrosnabmahorka.netlify.app/
+
+### Key Components
+- `src/components/Header.tsx`: фиксированная "плавающая капсула" (CSS класс `.header`), меняет состояние `scrolled` после 40px скролла.
+- `src/components/HeroSection.tsx`: hero с фоном **desktop видео** `/1234.mp4` и **mobile картинкой** `/mobilHero.webp`; на mobile разметка разведена на «H1 сверху» и «плашки+CTA снизу», чтобы центр кадра был чистым.
+- `src/App.tsx`: собирает главную страницу из секций (`Hero`, `Trust Block`, каталог, и т.д.).
+- `src/components/CountUp.tsx`: анимированный счётчик (0 → target) при появлении в viewport.
+
 ## User Defined Namespaces
-- [Leave blank - user populates]
+- frontend

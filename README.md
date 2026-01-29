@@ -88,6 +88,39 @@ python -m app.main
 
 ---
 
+## Сайт — React-каталог
+
+React-приложение для отображения каталога товаров с интеграцией Google Sheets.
+
+**Папка:** [sitemahorkaproject/](./sitemahorkaproject/)
+
+### Архитектура
+
+```
+┌─────────────────┐     fetch JSON      ┌──────────────────┐
+│   React App     │ ◄────────────────── │  Apps Script     │
+│   (Vite)        │                     │  Web App         │
+└─────────────────┘                     └────────┬─────────┘
+                                                 │ читает
+                                                 ▼
+                                        ┌──────────────────┐
+                                        │  Google Sheets   │
+                                        │  лист "Склад"    │
+                                        └──────────────────┘
+```
+
+### Быстрый старт (сайт)
+
+```bash
+cd sitemahorkaproject
+npm install
+cp .env.example .env
+# Добавьте VITE_APPS_SCRIPT_URL в .env
+npm run dev
+```
+
+---
+
 ## Google Sheets — Структура
 
 Таблица должна содержать лист **"Склад"** с колонками:
