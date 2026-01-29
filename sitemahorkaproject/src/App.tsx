@@ -279,7 +279,7 @@ function App() {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <span>Полный пакет документов</span>
+                  <span>Полный пакет документов по ЭДО</span>
                 </li>
               </ul>
             </div>
@@ -318,7 +318,7 @@ function App() {
                   <div>
                     <p className="font-semibold mb-1 text-text-on-light text-sm md:text-base">Самовывоз</p>
                     <p className="text-xs md:text-sm text-subtext-on-light leading-relaxed">
-                      Со склада в Краснодарском крае
+                      Калужское шоссе 22 километр, 10, Москва, вход 14, 2 этаж, павильон 60.
                     </p>
                   </div>
                 </div>
@@ -342,14 +342,20 @@ function App() {
               </h3>
               <div className="grid grid-cols-2 gap-3 md:gap-4">
                 {[
-                  'Москва и МО',
+                  'Москва',
+                  'Самара',
                   'Санкт-Петербург',
-                  'Краснодар',
+                  'Омск',
+                  'Новосибирск',
                   'Ростов-на-Дону',
                   'Екатеринбург',
-                  'Новосибирск',
+                  'Уфа',
                   'Казань',
+                  'Красноярск',
                   'Нижний Новгород',
+                  'Пермь',
+                  'Челябинск',
+                  'Воронеж',
                 ].map((city) => (
                   <div key={city} className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1">
                     <div className="w-1.5 h-1.5 bg-color-accent rounded-full shadow-sm"></div>

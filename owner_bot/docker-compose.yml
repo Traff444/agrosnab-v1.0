@@ -8,6 +8,7 @@ services:
     volumes:
       - ./tmp:/app/tmp
       - ./data:/app/data
+      - ../secrets:/app/secrets
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     healthcheck:

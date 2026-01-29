@@ -15,9 +15,9 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
     """Main menu reply keyboard."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📦 Приход товара"), KeyboardButton(text="📊 CRM")],
+            [KeyboardButton(text="📦 Приход товара"), KeyboardButton(text="📊 Склад")],
             [KeyboardButton(text="🔍 Найти товар"), KeyboardButton(text="📋 Заказы сегодня")],
-            [KeyboardButton(text="🔧 Статус")],
+            [KeyboardButton(text="📊 CRM"), KeyboardButton(text="🔧 Статус")],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -298,3 +298,34 @@ def pagination_keyboard(
         )
 
     return InlineKeyboardMarkup(inline_keyboard=[buttons])
+
+
+def stock_list_keyboard(
+    products: list[Product],
+    current_page: int,
+    total_pages: int,
+) -> InlineKeyboardMarkup:
+    """Stock list with pagination."""
+    buttons = []
+
+    for p in products:
+        status = "✅" if p.active else "❌"
+        label = f"{status} {p.name[:25]} ({p.stock} шт.)"
+        buttons.append([
+            InlineKeyboardButton(
+                text=label,
+                callback_data=f"stock_select_{p.row_number}"
+            )
+        ])
+
+    nav_row = []
+    if current_page > 1:
+        nav_row.append(InlineKeyboardButton(text="◀️", callback_data=f"stock_page_{current_page - 1}"))
+    nav_row.append(InlineKeyboardButton(text=f"{current_page}/{total_pages}", callback_data="noop"))
+    if current_page < total_pages:
+        nav_row.append(InlineKeyboardButton(text="▶️", callback_data=f"stock_page_{current_page + 1}"))
+    buttons.append(nav_row)
+
+    buttons.append([InlineKeyboardButton(text="❌ Закрыть", callback_data="stock_close")])
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

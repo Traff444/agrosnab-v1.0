@@ -28,7 +28,7 @@ export function Header() {
       <div className="header-container max-w-[1200px] mx-auto px-4 md:px-6 py-3.5 md:py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sprout className="w-7 h-7 md:w-8 md:h-8 text-color-accent" strokeWidth={1.8} />
-          <span className="header-logo font-heading font-bold text-lg md:text-xl">АгроСнаб</span>
+          <span className="header-logo font-heading font-bold text-lg md:text-xl">Махорка</span>
         </div>
 
         <nav className="hidden md:flex items-center gap-6 lg:gap-8">

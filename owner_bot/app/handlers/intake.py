@@ -1,5 +1,6 @@
 """Intake flow handlers with FSM."""
 
+import logging
 import os
 from pathlib import Path
 
@@ -9,6 +10,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 from app.keyboards import (
     main_menu_keyboard,
     cancel_keyboard,
@@ -199,6 +202,8 @@ async def process_match_decision(callback: CallbackQuery, state: FSMContext) -> 
     if not callback.from_user or not callback.data:
         return
 
+    logger.info("process_match_decision: user=%s, data=%s", callback.from_user.id, callback.data)
+
     session = intake_service.get_session(callback.from_user.id)
     if not session:
         await callback.answer("Сессия истекла", show_alert=True)
@@ -208,11 +213,13 @@ async def process_match_decision(callback: CallbackQuery, state: FSMContext) -> 
     await callback.answer()
 
     if callback.data == "match_new":
+        logger.info("process_match_decision: creating NEW product")
         intake_service.set_new_product(session)
         await _ask_photo_decision(callback.message, state, session)
     else:
         # Selected existing product
         row_number = int(callback.data.replace("match_", ""))
+        logger.info("process_match_decision: selected EXISTING product row=%d", row_number)
         products = await product_service.get_all()
         product = next((p for p in products if p.row_number == row_number), None)
 
@@ -221,6 +228,7 @@ async def process_match_decision(callback: CallbackQuery, state: FSMContext) -> 
             return
 
         intake_service.set_existing_product(session, product)
+        logger.info("process_match_decision: set existing_product SKU=%s", product.sku)
         await _ask_photo_decision(callback.message, state, session)
 
 
@@ -406,21 +414,36 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
     if not callback.from_user or not callback.data:
         return
 
+    logger.info("process_preview_confirm: user=%s, data=%s", callback.from_user.id, callback.data)
+
     session = intake_service.get_session(callback.from_user.id)
     if not session:
+        logger.warning("process_preview_confirm: session not found!")
         await callback.answer("Сессия истекла", show_alert=True)
         await state.clear()
         return
 
+    logger.info(
+        "process_preview_confirm: session found, is_new=%s, name=%s, qty=%s, drive_url=%s",
+        session.is_new_product, session.name, session.quantity, session.drive_url
+    )
+
     await callback.answer()
 
     if callback.data == "confirm":
+        logger.info("process_preview_confirm: user confirmed, calling complete_intake")
         # Execute the intake
         username = callback.from_user.username or str(callback.from_user.id)
         result = await intake_service.complete_intake(session, updated_by=f"tg:{username}")
 
+        logger.info(
+            "process_preview_confirm: result.success=%s, is_new=%s, error=%s",
+            result.success, result.is_new, result.error
+        )
+
         if result.success:
             action = "создан" if result.is_new else "обновлён"
+            logger.info("process_preview_confirm: SUCCESS - product %s", action)
             card = product_service.format_product_card(result.product, show_service_fields=True)
 
             await callback.message.answer(
@@ -433,6 +456,7 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
             await state.clear()
         else:
             # Error - offer retry
+            logger.error("process_preview_confirm: FAILED - %s", result.error)
             await state.set_state(IntakeState.retry_sheets_write)
             await callback.message.answer(
                 f"❌ Ошибка записи в Google Sheets:\n{result.error}\n\n"

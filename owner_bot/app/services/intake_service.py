@@ -1,11 +1,9 @@
 """Intake session service."""
 
-import os
-from pathlib import Path
+import logging
+import secrets
 from dataclasses import dataclass
 from datetime import datetime
-
-from app.config import get_settings
 from app.models import (
     IntakeSession,
     Product,
@@ -14,10 +12,12 @@ from app.models import (
     DriveUploadResult,
 )
 from app.sheets import sheets_client
-from app.drive import drive_client
+from app.cloudinary_client import cloudinary_client
 from app.intake_parser import parse_intake_string
 from app.photo_quality import analyze_photo
 from app.photo_enhance import enhance_photo
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -116,15 +116,13 @@ class IntakeService:
         session: IntakeSession,
         file_path: str,
     ) -> DriveUploadResult:
-        """Upload photo to Drive."""
-        settings = get_settings()
-
+        """Upload photo to Cloudinary."""
         # Generate filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         sku_part = session.sku or "new"
         filename = f"{sku_part}_{timestamp}.jpg"
 
-        result = await drive_client.upload_photo(file_path, filename)
+        result = await cloudinary_client.upload_photo(file_path, filename)
 
         session.drive_file_id = result.file_id
         session.drive_url = result.public_url
@@ -137,6 +135,14 @@ class IntakeService:
         updated_by: str = "owner_bot",
     ) -> IntakeResult:
         """Complete the intake session."""
+        logger.info(
+            "complete_intake: is_new=%s, name=%s, price=%s, qty=%s, photo_url=%s",
+            session.is_new_product,
+            session.name,
+            session.price,
+            session.quantity,
+            session.drive_url,
+        )
         if session.is_new_product:
             return await self._create_new_product(session, updated_by)
         else:
@@ -148,13 +154,26 @@ class IntakeService:
         updated_by: str,
     ) -> IntakeResult:
         """Create new product from session."""
+        logger.info("_create_new_product: starting")
         if not session.name or session.price is None or session.quantity is None:
+            logger.warning(
+                "_create_new_product: missing fields - name=%s, price=%s, qty=%s",
+                session.name,
+                session.price,
+                session.quantity,
+            )
             return IntakeResult(
                 success=False,
                 error="Не заполнены обязательные поля: название, цена, количество",
             )
 
         try:
+            logger.info(
+                "_create_new_product: calling sheets_client.create_product(%s, %s, %s)",
+                session.name,
+                session.price,
+                session.quantity,
+            )
             product = await sheets_client.create_product(
                 name=session.name,
                 price=session.price,
@@ -162,6 +181,31 @@ class IntakeService:
                 photo_url=session.drive_url or "",
                 updated_by=updated_by,
             )
+            logger.info(
+                "_create_new_product: success! SKU=%s, row=%s",
+                product.sku,
+                product.row_number,
+            )
+
+            # Log intake to "Внесение" sheet
+            if session.quantity > 0:
+                actor_username = updated_by.replace("tg:", "")
+                intake_result = await sheets_client.apply_intake(
+                    row_number=product.row_number,
+                    qty=session.quantity,
+                    stock_before=0,  # New product starts at 0
+                    stock_after=session.quantity,
+                    reason="new_product",
+                    actor_id=session.user_id,
+                    actor_username=actor_username,
+                    operation_id=secrets.token_hex(8),
+                    note="Создание нового товара",
+                )
+                if not intake_result.ok:
+                    logger.warning(
+                        "_create_new_product: failed to log intake: %s",
+                        intake_result.error,
+                    )
 
             return IntakeResult(
                 success=True,
@@ -170,6 +214,7 @@ class IntakeService:
                 photo_uploaded=bool(session.drive_url),
             )
         except Exception as e:
+            logger.exception("_create_new_product: failed with exception")
             return IntakeResult(
                 success=False,
                 error=f"Ошибка создания товара: {e}",
@@ -181,34 +226,67 @@ class IntakeService:
         updated_by: str,
     ) -> IntakeResult:
         """Update existing product from session."""
+        logger.info("_update_existing_product: starting")
         if not session.existing_product:
+            logger.warning("_update_existing_product: no existing_product set")
             return IntakeResult(
                 success=False,
                 error="Товар не выбран",
             )
 
         if session.quantity is None:
+            logger.warning("_update_existing_product: quantity is None")
             return IntakeResult(
                 success=False,
                 error="Не указано количество",
             )
 
         try:
+            logger.info(
+                "_update_existing_product: updating stock for SKU=%s, delta=%d",
+                session.existing_product.sku,
+                session.quantity,
+            )
             # Update stock
             product = await sheets_client.update_product_stock(
                 product=session.existing_product,
                 quantity_delta=session.quantity,
                 updated_by=updated_by,
             )
+            logger.info("_update_existing_product: stock updated, new_stock=%d", product.stock)
+
+            # Log intake to "Внесение" sheet
+            if session.quantity > 0:
+                stock_before = session.existing_product.stock
+                stock_after = product.stock
+                actor_username = updated_by.replace("tg:", "")
+                intake_result = await sheets_client.apply_intake(
+                    row_number=session.existing_product.row_number,
+                    qty=session.quantity,
+                    stock_before=stock_before,
+                    stock_after=stock_after,
+                    reason="intake",
+                    actor_id=session.user_id,
+                    actor_username=actor_username,
+                    operation_id=secrets.token_hex(8),
+                    note="",
+                )
+                if not intake_result.ok:
+                    logger.warning(
+                        "_update_existing_product: failed to log intake: %s",
+                        intake_result.error,
+                    )
 
             # Update photo if provided
             photo_permissions_ok = True
             if session.drive_url:
+                logger.info("_update_existing_product: updating photo URL")
                 product = await sheets_client.update_product_photo(
                     product=product,
                     photo_url=session.drive_url,
                     updated_by=updated_by,
                 )
+                logger.info("_update_existing_product: photo URL updated")
 
             return IntakeResult(
                 success=True,
@@ -218,6 +296,7 @@ class IntakeService:
                 photo_permissions_ok=photo_permissions_ok,
             )
         except Exception as e:
+            logger.exception("_update_existing_product: failed with exception")
             return IntakeResult(
                 success=False,
                 error=f"Ошибка обновления товара: {e}",

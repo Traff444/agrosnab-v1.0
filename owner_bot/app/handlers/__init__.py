@@ -9,6 +9,7 @@ from app.handlers.products import router as products_router
 from app.handlers.orders import router as orders_router
 from app.handlers.health import router as health_router
 from app.handlers.crm import router as crm_router
+from app.handlers.stock import router as stock_router
 
 
 def get_main_router() -> Router:
@@ -22,6 +23,7 @@ def get_main_router() -> Router:
     main_router.include_router(health_router)
     main_router.include_router(intake_router)
     main_router.include_router(products_router)
+    main_router.include_router(stock_router)
     main_router.include_router(orders_router)
     main_router.include_router(crm_router)
     main_router.include_router(start_router)

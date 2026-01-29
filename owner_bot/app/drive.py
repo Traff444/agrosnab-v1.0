@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 SCOPES = [
-    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive",  # Full access needed for upload + read existing folders
 ]
 
 

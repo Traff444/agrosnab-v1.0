@@ -93,6 +93,69 @@ StockOperationState:
 5. Get shareable URL
 6. Write URL to Google Sheets
 
+## Stock Operations (sheets.py)
+
+### Методы логирования
+
+| Метод | Лист | Описание |
+|-------|------|----------|
+| `apply_intake()` | Внесение | Логирует приход, инкрементирует `Внесено_всего` |
+| `apply_writeoff()` | Списание | Логирует списание, обновляет остаток, инкрементирует `Списано_всего` |
+| `apply_correction()` | Внесение/Списание | В зависимости от delta (+ или -) |
+| `apply_archive_zero_out()` | Списание | Списывает весь остаток + деактивирует |
+
+### Сигнатура apply_intake()
+
+```python
+async def apply_intake(
+    self,
+    row_number: int,
+    qty: int,
+    stock_before: int,      # Передаётся извне!
+    stock_after: int,       # Передаётся извне!
+    reason: str,            # "new_product", "intake"
+    actor_id: int,
+    actor_username: str,
+    operation_id: str | None = None,
+    note: str = "",
+) -> StockOperationResult
+```
+
+**Важно:** `stock_before`/`stock_after` передаются как параметры (не вычисляются внутри), т.к. метод вызывается ПОСЛЕ обновления остатка.
+
+### Вызов из intake_service.py
+
+```python
+# Для нового товара
+await sheets_client.apply_intake(
+    row_number=product.row_number,
+    qty=session.quantity,
+    stock_before=0,
+    stock_after=session.quantity,
+    reason="new_product",
+    ...
+)
+
+# Для существующего товара
+await sheets_client.apply_intake(
+    row_number=session.existing_product.row_number,
+    qty=session.quantity,
+    stock_before=session.existing_product.stock,
+    stock_after=product.stock,
+    reason="intake",
+    ...
+)
+```
+
+### Self-Heal для листов логов
+
+Листы "Внесение" и "Списание" создаются автоматически при первой записи.
+Колонки добавляются автоматически если отсутствуют (`ensure_log_columns()`).
+
+### Дедупликация
+
+Каждая операция имеет `operation_id` (hex token). При повторном вызове с тем же ID операция не дублируется (`_check_operation_exists()`).
+
 ## Security
 
 - Owner whitelist via `OWNER_TELEGRAM_IDS`

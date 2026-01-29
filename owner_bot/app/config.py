@@ -27,8 +27,13 @@ class Settings(BaseSettings):
     google_service_account_json_path: str = ""
     google_service_account_json_b64: str = ""
 
-    # Google Drive
-    drive_folder_id: str
+    # Google Drive (deprecated, using Cloudinary instead)
+    drive_folder_id: str = ""
+
+    # Cloudinary (photo storage)
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = ""
 
     # Photo quality thresholds
     photo_min_size: int = 800

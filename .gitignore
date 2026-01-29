@@ -42,6 +42,7 @@ data/*
 
 # Misc local artifacts
 meta-origin-*.json
+telegram_bot.xlsx
 
 # OpenMemory - IDE/Assistant specific rules
 .cursor/rules/openmemory.mdc

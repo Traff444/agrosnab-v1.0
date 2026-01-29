@@ -203,6 +203,8 @@ class SheetsClient:
         sku = self._generate_sku()
         now = datetime.now().isoformat()
 
+        logger.info("create_product: sku=%s, name=%s, price=%s, qty=%s", sku, name, price, quantity)
+
         # Build row based on column map
         row = [""] * (max(self._col_map.values()) + 1)
 
@@ -224,6 +226,8 @@ class SheetsClient:
         if "last_updated_by" in self._col_map:
             row[self._col_map["last_updated_by"]] = updated_by
 
+        logger.info("create_product: appending row to sheet %s", self._sheet_name)
+
         result = (
             self.service.spreadsheets()
             .values()
@@ -237,10 +241,13 @@ class SheetsClient:
             .execute()
         )
 
+        logger.info("create_product: append result=%s", result)
+
         # Extract new row number from response
         updated_range = result.get("updates", {}).get("updatedRange", "")
         # Format: "Склад!A123:Z123"
         row_num = int(updated_range.split("!")[1].split(":")[0][1:])
+        logger.info("create_product: new row_num=%d", row_num)
 
         return Product(
             row_number=row_num,
@@ -267,6 +274,11 @@ class SheetsClient:
         settings = get_settings()
         new_stock = product.stock + quantity_delta
         now = datetime.now().isoformat()
+
+        logger.info(
+            "update_product_stock: SKU=%s, row=%d, old=%d, delta=%d, new=%d",
+            product.sku, product.row_number, product.stock, quantity_delta, new_stock
+        )
 
         updates = []
 
@@ -649,6 +661,113 @@ class SheetsClient:
     # -------------------------------------------------------------------------
     # Stock Operations
     # -------------------------------------------------------------------------
+
+    async def apply_intake(
+        self,
+        row_number: int,
+        qty: int,
+        stock_before: int,
+        stock_after: int,
+        reason: str,
+        actor_id: int,
+        actor_username: str,
+        operation_id: str | None = None,
+        note: str = "",
+    ) -> StockOperationResult:
+        """
+        Log intake operation to "Внесение" sheet and increment Внесено_всего.
+
+        Note: This method only logs the operation. Stock updates should be
+        performed separately using update_product_stock() or create_product().
+
+        Args:
+            row_number: Row number of product in "Склад"
+            qty: Quantity added (must be > 0)
+            stock_before: Stock level before intake
+            stock_after: Stock level after intake
+            reason: Reason for intake (e.g., "intake", "new_product")
+            actor_id: Telegram user ID
+            actor_username: Telegram username
+            operation_id: Unique operation ID for deduplication
+            note: Optional note
+
+        Returns:
+            StockOperationResult with ok, stock_before, stock_after
+        """
+        # Generate operation_id if not provided
+        if operation_id is None:
+            operation_id = secrets.token_hex(8)
+
+        # Validate qty
+        if qty <= 0:
+            return StockOperationResult(
+                ok=False,
+                stock_before=stock_before,
+                stock_after=stock_after,
+                operation_id=operation_id,
+                error="Количество должно быть больше 0",
+            )
+
+        # Get product for SKU and name
+        product = await self.get_product_by_row(row_number)
+        if not product:
+            return StockOperationResult(
+                ok=False,
+                stock_before=stock_before,
+                stock_after=stock_after,
+                operation_id=operation_id,
+                error="Товар не найден",
+            )
+
+        # Check for duplicate operation (deduplication)
+        await self.ensure_log_columns("Внесение")
+        if await self._check_operation_exists("Внесение", operation_id):
+            # Already logged, just return success (idempotent)
+            return StockOperationResult(
+                ok=True,
+                stock_before=stock_before,
+                stock_after=stock_after,
+                operation_id=operation_id,
+            )
+
+        # Append log entry
+        log_success = await self.append_log_entry(
+            sheet_name="Внесение",
+            sku=product.sku,
+            name=product.name,
+            qty=qty,
+            stock_before=stock_before,
+            stock_after=stock_after,
+            reason=reason,
+            source="owner_intake",
+            actor_id=actor_id,
+            actor_username=actor_username,
+            operation_id=operation_id,
+            note=note,
+        )
+
+        if not log_success:
+            return StockOperationResult(
+                ok=False,
+                stock_before=stock_before,
+                stock_after=stock_before,
+                operation_id=operation_id,
+                error="Не удалось записать в журнал",
+            )
+
+        # Increment Внесено_всего
+        try:
+            await self._increment_total_column(row_number, "Внесено_всего", qty)
+        except Exception as e:
+            logger.error(f"Failed to increment Внесено_всего: {e}")
+            # Non-critical, continue
+
+        return StockOperationResult(
+            ok=True,
+            stock_before=stock_before,
+            stock_after=stock_after,
+            operation_id=operation_id,
+        )
 
     async def apply_writeoff(
         self,
