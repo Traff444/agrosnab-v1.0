@@ -68,8 +68,11 @@ AUTO_WRITE_SPISANIE=true
 ### Возможности
 
 - **Приход товара** — быстрый ввод "Название Цена Кол-во"
+- **Просмотр склада** — все товары с пагинацией
 - **Поиск товаров** — по SKU или названию
+- **Операции с товарами** — списание, корректировка, архивация
 - **Управление фото** — загрузка, анализ качества, улучшение
+- **CRM** — управление клиентами, воронка продаж
 - **Диагностика** — проверка подключений к Sheets и Drive
 
 ### Быстрый старт
@@ -104,7 +107,75 @@ python -m app.main
 
 ## Docker
 
+### Структура проекта для Docker
+
+```
+excel-telegram-bot-starter/
+├── secrets/                          # Google Service Account JSON (общая папка)
+│   └── meta-origin-483709-v3-xxx.json
+├── docker-compose.yml                # Shop Bot
+├── .env                              # Shop Bot config
+├── owner_bot/
+│   ├── docker-compose.yml            # Owner Bot
+│   └── .env                          # Owner Bot config
+└── ...
+```
+
+### Настройка secrets
+
+1. Создайте папку `secrets/` в корне проекта:
+
 ```bash
+mkdir -p secrets
+```
+
+2. Поместите JSON-файл сервисного аккаунта Google:
+
+```bash
+cp /path/to/your-service-account.json secrets/
+```
+
+3. Настройте пути в `.env` файлах:
+
+**Shop Bot (`.env` в корне):**
+```bash
+GOOGLE_SERVICE_ACCOUNT_JSON_PATH=/run/secrets/your-service-account.json
+```
+
+**Owner Bot (`owner_bot/.env`):**
+```bash
+GOOGLE_SERVICE_ACCOUNT_JSON_PATH=/app/secrets/your-service-account.json
+```
+
+### Volumes в docker-compose
+
+**Shop Bot (`docker-compose.yml`):**
+```yaml
+services:
+  bot:
+    volumes:
+      - ./secrets:/run/secrets:ro   # Credentials (read-only)
+      - ./data:/app/data            # Persistent data
+```
+
+**Owner Bot (`owner_bot/docker-compose.yml`):**
+```yaml
+services:
+  owner-bot:
+    volumes:
+      - ./tmp:/app/tmp              # Temp files
+      - ./data:/app/data            # Persistent data
+      - ../secrets:/app/secrets     # Credentials (shared from root)
+```
+
+### Запуск
+
+```bash
+# Shop Bot (из корня)
+docker compose up --build
+
+# Owner Bot (из owner_bot/)
+cd owner_bot
 docker compose up --build
 ```
 
