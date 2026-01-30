@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime
+import logging
 
 from aiogram import Dispatcher, F
 from aiogram.fsm.context import FSMContext

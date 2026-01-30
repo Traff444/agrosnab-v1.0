@@ -2,8 +2,6 @@
 
 import re
 
-import pytest
-
 
 class TestMakeOrderId:
     """Tests for make_order_id() function."""

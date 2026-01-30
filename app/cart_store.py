@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+from datetime import date
 import hashlib
 import json
 import logging
-from datetime import date
 from typing import Any
 
 import aiosqlite
-
 
 logger = logging.getLogger(__name__)
 
