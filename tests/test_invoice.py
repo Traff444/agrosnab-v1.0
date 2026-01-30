@@ -54,7 +54,7 @@ class TestEnsureFont:
 
         with patch("app.invoice.pdfmetrics") as mock_pdfmetrics:
             mock_pdfmetrics.getFont.side_effect = KeyError("DejaVu")
-            with patch("app.invoice.TTFont") as mock_ttfont:
+            with patch("app.invoice.TTFont"):
                 result = ensure_font()
                 mock_pdfmetrics.registerFont.assert_called_once()
                 assert result == "DejaVu"

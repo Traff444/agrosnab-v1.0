@@ -1,7 +1,6 @@
 """Tests for utility functions."""
 
 import re
-from unittest.mock import patch
 
 import pytest
 

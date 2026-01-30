@@ -447,8 +447,6 @@ class SheetsClient:
 
             # Get current values
             current_stage = existing_row[4] if len(existing_row) > 4 else ''
-            current_orders = int(existing_row[5]) if existing_row[5] else 0
-            current_ltv = int(existing_row[6]) if existing_row[6] else 0
 
             # Compute new stage (only goes up)
             if stage:
@@ -530,7 +528,7 @@ class SheetsClient:
             # Match user_id
             user_id_str = str(row[0]) if row else ''
             if query_digits and query_digits in user_id_str:
-                lead = dict(zip(self.LEADS_COLUMNS, row + [''] * (len(self.LEADS_COLUMNS) - len(row))))
+                lead = dict(zip(self.LEADS_COLUMNS, row + [''] * (len(self.LEADS_COLUMNS) - len(row)), strict=False))
                 results.append(lead)
                 continue
 
@@ -538,14 +536,14 @@ class SheetsClient:
             phone = row[10] if len(row) > 10 else ''
             phone_digits = ''.join(c for c in phone if c.isdigit())
             if query_digits and query_digits in phone_digits:
-                lead = dict(zip(self.LEADS_COLUMNS, row + [''] * (len(self.LEADS_COLUMNS) - len(row))))
+                lead = dict(zip(self.LEADS_COLUMNS, row + [''] * (len(self.LEADS_COLUMNS) - len(row)), strict=False))
                 results.append(lead)
                 continue
 
             # Match username
             username = row[1] if len(row) > 1 else ''
             if query_lower and query_lower in username.lower():
-                lead = dict(zip(self.LEADS_COLUMNS, row + [''] * (len(self.LEADS_COLUMNS) - len(row))))
+                lead = dict(zip(self.LEADS_COLUMNS, row + [''] * (len(self.LEADS_COLUMNS) - len(row)), strict=False))
                 results.append(lead)
 
         return results[:20]  # Limit results

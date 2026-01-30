@@ -321,7 +321,6 @@ def register_cart_handlers(
             await sheets_client.upsert_lead(user_id, stage='checkout', phone=phone)
         except Exception as e:
             logger.warning(f"Failed to update lead {user_id}: {e}")
-        cfg = Settings()
         cdek_client = get_cdek_client()
         # Если клиент СДЭК недоступен — идём по старой схеме (ручной ввод)
         # В demo mode клиент будет доступен даже без реальных кредов.

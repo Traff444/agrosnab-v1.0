@@ -30,7 +30,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
       - name: Set up Python
         run: uv python install 3.11
-      - name: Install dependencies
-        run: uv pip install --system -r requirements.txt
+      - name: Create venv and install dependencies
+        run: uv venv && uv pip install -r requirements.txt
       - name: Run tests
-        run: pytest -q
+        run: uv run pytest -q

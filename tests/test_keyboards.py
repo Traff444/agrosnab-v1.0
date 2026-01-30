@@ -1,6 +1,5 @@
 """Tests for keyboard builders."""
 
-import pytest
 from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup
 
 

@@ -3,10 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, date
+from datetime import date
 from typing import Any
 
 import aiosqlite
+
 
 logger = logging.getLogger(__name__)
 
@@ -496,18 +497,7 @@ async def get_daily_stats(target_date: str | date | None = None) -> dict[str, in
         row = await cursor.fetchone()
         stats['checkout'] = row[0] if row else 0
 
-        # Orders created
-        cursor = await db.execute(
-            """
-            SELECT COUNT(*), payload_json
-            FROM crm_events
-            WHERE event_type = 'order_created' AND DATE(created_at) = ?
-            """,
-            (target_date,),
-        )
-        rows = await cursor.fetchall()
-
-        # Count orders and sum totals
+        # Orders created and sum totals
         cursor = await db.execute(
             """
             SELECT payload_json

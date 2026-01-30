@@ -34,7 +34,7 @@ class CdekCity:
     country: str
 
     @classmethod
-    def from_api(cls, data: dict[str, Any]) -> "CdekCity":
+    def from_api(cls, data: dict[str, Any]) -> CdekCity:
         return cls(
             code=data.get("code", 0),
             city=data.get("city", ""),
@@ -61,7 +61,7 @@ class CdekPvz:
     nearest_metro: str | None = None
 
     @classmethod
-    def from_api(cls, data: dict[str, Any]) -> "CdekPvz":
+    def from_api(cls, data: dict[str, Any]) -> CdekPvz:
         location = data.get("location", {})
         return cls(
             code=data.get("code", ""),
