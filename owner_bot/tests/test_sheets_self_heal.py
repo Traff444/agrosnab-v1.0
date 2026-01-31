@@ -133,7 +133,7 @@ class TestEnsureLogColumns:
             mock_update.execute.return_value = {}
             client.service.spreadsheets().values().update.return_value = mock_update
 
-            result = await client.ensure_log_columns("Списание")
+            await client.ensure_log_columns("Списание")
 
             # Verify update was called with all columns
             update_calls = client.service.spreadsheets().values().update.call_args_list

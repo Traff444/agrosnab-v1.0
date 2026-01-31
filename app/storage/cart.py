@@ -5,13 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from typing import Any
+from collections.abc import Callable
 
 import aiosqlite
 
 from .db import DB_PATH
 
 logger = logging.getLogger(__name__)
+
+# Type aliases for clarity
+CartItem = tuple[str, int]  # (sku, qty)
+OrderIdGenerator = Callable[[], str]
 
 
 async def add_to_cart(user_id: int, sku: str, qty: int) -> None:
@@ -70,7 +74,7 @@ async def clear_cart(user_id: int) -> None:
         await db.commit()
 
 
-async def get_cart(user_id: int) -> list[tuple[str, int]]:
+async def get_cart(user_id: int) -> list[CartItem]:
     """Get cart contents as list of (sku, qty) tuples."""
     async with aiosqlite.connect(DB_PATH) as db:
         cur = await db.execute(
@@ -85,7 +89,7 @@ async def get_cart(user_id: int) -> list[tuple[str, int]]:
 # ---------------------------------------------------------------------------
 
 
-def compute_cart_hash(cart_items: list[tuple[str, int]]) -> str:
+def compute_cart_hash(cart_items: list[CartItem]) -> str:
     """Compute a stable hash for cart contents to detect duplicate checkouts."""
     data = json.dumps(sorted(cart_items), sort_keys=True)
     return hashlib.sha256(data.encode()).hexdigest()[:16]
@@ -93,8 +97,8 @@ def compute_cart_hash(cart_items: list[tuple[str, int]]) -> str:
 
 async def get_or_create_checkout_session(
     user_id: int,
-    cart_items: list[tuple[str, int]],
-    order_id_generator: Any,
+    cart_items: list[CartItem],
+    order_id_generator: OrderIdGenerator,
 ) -> tuple[str, bool]:
     """
     Get existing checkout session or create new one.

@@ -8,6 +8,8 @@ This package provides modular storage for:
 """
 
 from .cart import (
+    CartItem,
+    OrderIdGenerator,
     add_to_cart,
     cleanup_old_checkout_sessions,
     clear_cart,
@@ -20,6 +22,8 @@ from .cart import (
 )
 from .chat_history import (
     MAX_HISTORY_MESSAGES,
+    ChatMessage,
+    MessageRole,
     add_chat_message,
     clear_chat_history,
     get_ai_mode,
@@ -30,6 +34,13 @@ from .crm import (
     EVENT_TO_STAGE,
     MAX_CRM_MESSAGES,
     STAGE_PRIORITY,
+    CrmEvent,
+    CrmMessage,
+    CrmStage,
+    DailyStats,
+    EventType,
+    MessageDirection,
+    MessageType,
     compute_stage,
     format_messages_for_ai,
     get_daily_stats,
@@ -50,7 +61,10 @@ __all__ = [
     # Database
     "DB_PATH",
     "init_db",
-    # Cart
+    # Cart types
+    "CartItem",
+    "OrderIdGenerator",
+    # Cart functions
     "add_to_cart",
     "set_qty",
     "remove_from_cart",
@@ -60,17 +74,29 @@ __all__ = [
     "get_or_create_checkout_session",
     "mark_checkout_complete",
     "cleanup_old_checkout_sessions",
-    # Chat history
+    # Chat history types
+    "MessageRole",
+    "ChatMessage",
+    # Chat history functions
     "MAX_HISTORY_MESSAGES",
     "add_chat_message",
     "get_chat_history",
     "clear_chat_history",
     "set_ai_mode",
     "get_ai_mode",
-    # CRM
+    # CRM types
+    "CrmStage",
+    "EventType",
+    "MessageDirection",
+    "MessageType",
+    "CrmEvent",
+    "CrmMessage",
+    "DailyStats",
+    # CRM constants
     "STAGE_PRIORITY",
     "EVENT_TO_STAGE",
     "MAX_CRM_MESSAGES",
+    # CRM functions
     "log_crm_event",
     "get_user_events",
     "get_user_stage",

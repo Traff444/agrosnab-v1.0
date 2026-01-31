@@ -38,7 +38,6 @@ class TestIntakeService:
     @pytest.mark.asyncio
     async def test_create_session(self):
         """Test session creation."""
-        from app.models import IntakeSession
         from app.services.intake_service import IntakeService
 
         mock_store = MagicMock()

@@ -58,7 +58,7 @@ def _find_content_bbox(image: Image.Image, border_size: int = 50) -> tuple[int, 
     for y in range(height):
         for x in range(width):
             pixel = pixels[x, y][:3]
-            diff = sum(abs(a - b) for a, b in zip(pixel, bg_color))
+            diff = sum(abs(a - b) for a, b in zip(pixel, bg_color, strict=True))
             if diff > tolerance * 3:
                 min_x = min(min_x, x)
                 min_y = min(min_y, y)

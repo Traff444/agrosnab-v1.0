@@ -94,7 +94,7 @@ class TestWhitelistMiddleware:
         handler = AsyncMock()
         data = {}
 
-        result = await middleware(handler, callback, data)
+        await middleware(handler, callback, data)
 
         handler.assert_not_called()
         callback.answer.assert_called_once()

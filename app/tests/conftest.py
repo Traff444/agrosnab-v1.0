@@ -3,7 +3,7 @@
 import asyncio
 import os
 import tempfile
-from typing import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
 
 import aiosqlite
 import pytest

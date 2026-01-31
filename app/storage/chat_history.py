@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
+from typing import Literal, TypedDict
+
 import aiosqlite
 
 from .db import DB_PATH
 
 MAX_HISTORY_MESSAGES = 20  # Store last 20 messages per user
 
+# Type definitions
+MessageRole = Literal["user", "assistant", "system"]
 
-async def add_chat_message(user_id: int, role: str, content: str) -> None:
+
+class ChatMessage(TypedDict):
+    """Chat message structure."""
+
+    role: MessageRole
+    content: str
+
+
+async def add_chat_message(user_id: int, role: MessageRole, content: str) -> None:
     """Add a message to chat history. Role: 'user' or 'assistant' or 'system'."""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
@@ -30,8 +42,8 @@ async def add_chat_message(user_id: int, role: str, content: str) -> None:
         await db.commit()
 
 
-async def get_chat_history(user_id: int) -> list[dict]:
-    """Get chat history for user as list of {role, content} dicts."""
+async def get_chat_history(user_id: int) -> list[ChatMessage]:
+    """Get chat history for user as list of ChatMessage dicts."""
     async with aiosqlite.connect(DB_PATH) as db:
         cur = await db.execute(
             "SELECT role, content FROM chat_history WHERE user_id = ? ORDER BY created_at ASC",

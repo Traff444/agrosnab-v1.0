@@ -5,13 +5,53 @@ from __future__ import annotations
 import json
 import logging
 from datetime import date
-from typing import Any
+from typing import Any, Literal, TypedDict
 
 import aiosqlite
 
 from .db import DB_PATH
 
 logger = logging.getLogger(__name__)
+
+# Type definitions
+CrmStage = Literal["new", "engaged", "cart", "checkout", "customer", "repeat"]
+EventType = Literal[
+    "start", "catalog_view", "product_view", "search",
+    "add_to_cart", "checkout_started", "order_created"
+]
+MessageDirection = Literal["in", "out"]
+MessageType = Literal["text", "photo", "voice", "command"]
+
+
+class CrmEvent(TypedDict):
+    """CRM event structure."""
+
+    id: int
+    event_type: str
+    payload: dict[str, Any] | None
+    created_at: str
+
+
+class CrmMessage(TypedDict):
+    """CRM message structure."""
+
+    id: int
+    direction: MessageDirection
+    message_type: MessageType
+    text: str
+    created_at: str
+
+
+class DailyStats(TypedDict):
+    """Daily CRM statistics structure."""
+
+    date: str
+    visitors: int
+    engaged: int
+    cart: int
+    checkout: int
+    orders: int
+    orders_total: int
 
 # CRM Stage priorities (higher = further in funnel)
 STAGE_PRIORITY = {
@@ -66,8 +106,8 @@ async def get_user_events(
     user_id: int,
     limit: int = 50,
     event_types: list[str] | None = None,
-) -> list[dict[str, Any]]:
-    """Get CRM events for a user. Returns list of {id, event_type, payload, created_at}."""
+) -> list[CrmEvent]:
+    """Get CRM events for a user. Returns list of CrmEvent dicts."""
     async with aiosqlite.connect(DB_PATH) as db:
         if event_types:
             placeholders = ",".join("?" * len(event_types))
@@ -106,7 +146,7 @@ async def get_user_events(
         return events
 
 
-async def get_user_stage(user_id: int) -> str | None:
+async def get_user_stage(user_id: int) -> CrmStage | None:
     """Calculate current CRM stage for user based on their events."""
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
@@ -146,7 +186,7 @@ async def get_user_orders_count(user_id: int) -> int:
         return row[0] if row else 0
 
 
-async def get_daily_stats(target_date: str | date | None = None) -> dict[str, int]:
+async def get_daily_stats(target_date: str | date | None = None) -> DailyStats:
     """Get CRM statistics for a specific day."""
     if target_date is None:
         target_date = date.today().isoformat()
@@ -260,7 +300,7 @@ async def get_last_seen(user_id: int) -> str | None:
         return row[0] if row and row[0] else None
 
 
-def compute_stage(current_stage: str | None, new_stage: str) -> str:
+def compute_stage(current_stage: CrmStage | None, new_stage: CrmStage) -> CrmStage:
     """Compute resulting stage. Stage only goes UP, never down."""
     if current_stage is None:
         return new_stage
@@ -280,9 +320,9 @@ def compute_stage(current_stage: str | None, new_stage: str) -> str:
 
 async def log_crm_message(
     user_id: int,
-    direction: str,  # 'in' (from user) or 'out' (to user)
+    direction: MessageDirection,
     text: str,
-    message_type: str = "text",  # 'text', 'photo', 'voice', 'command'
+    message_type: MessageType = "text",
 ) -> int:
     """Log a message to CRM history. Returns the message_id."""
     # Truncate very long messages
@@ -321,9 +361,9 @@ async def log_crm_message(
 async def get_user_messages(
     user_id: int,
     limit: int = 50,
-    direction: str | None = None,
-) -> list[dict[str, Any]]:
-    """Get CRM messages for a user. Returns list of {id, direction, message_type, text, created_at}."""
+    direction: MessageDirection | None = None,
+) -> list[CrmMessage]:
+    """Get CRM messages for a user. Returns list of CrmMessage dicts."""
     async with aiosqlite.connect(DB_PATH) as db:
         if direction:
             query = """

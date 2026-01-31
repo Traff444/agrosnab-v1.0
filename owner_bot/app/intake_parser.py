@@ -89,14 +89,14 @@ def parse_intake_string(raw_input: str) -> ParsedIntake:
         candidates = sorted(numbers, key=lambda x: x[1])  # Sort by position
 
         # Find quantity (last number, should be reasonable: 1-1000)
-        for val, start, end in reversed(candidates):
+        for val, start, _end in reversed(candidates):
             if 1 <= val <= 1000 and val == int(val):
                 quantity = int(val)
                 candidates = [c for c in candidates if c[1] != start]
                 break
 
         # Find price (remaining numbers, prefer larger reasonable value)
-        for val, start, end in reversed(candidates):
+        for val, _start, _end in reversed(candidates):
             if 1 <= val <= 1000000:
                 price = val
                 break
