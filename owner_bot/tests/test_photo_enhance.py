@@ -3,10 +3,9 @@
 import os
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
-from app.photo_enhance import enhance_photo, cleanup_tmp_files, format_enhance_report
+from app.photo_enhance import cleanup_tmp_files, enhance_photo, format_enhance_report
 
 
 class TestEnhancePhoto:

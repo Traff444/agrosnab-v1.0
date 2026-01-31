@@ -1,10 +1,11 @@
 """Tests for stock archive functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.sheets import SheetsClient
+import pytest
+
 from app.models import Product
+from app.sheets import SheetsClient
 
 
 @pytest.fixture
@@ -78,18 +79,16 @@ class TestApplyArchiveZeroOut:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
+                ), patch.object(
+                    client, "update_product_active", new_callable=AsyncMock
                 ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ):
-                        with patch.object(
-                            client, "update_product_active", new_callable=AsyncMock
-                        ):
-                            result = await client.apply_archive_zero_out(
-                                row_number=5,
-                                actor_id=123456,
-                                actor_username="testuser",
-                            )
+                    result = await client.apply_archive_zero_out(
+                        row_number=5,
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
             # Verify log entry went to Списание
             mock_append.assert_called_once()
@@ -124,23 +123,21 @@ class TestApplyArchiveZeroOut:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
-                ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ):
-                        with patch.object(
-                            client, "update_product_active", new_callable=AsyncMock
-                        ) as mock_deactivate:
-                            await client.apply_archive_zero_out(
-                                row_number=5,
-                                actor_id=123456,
-                                actor_username="testuser",
-                            )
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
+                ), patch.object(
+                    client, "update_product_active", new_callable=AsyncMock
+                ) as mock_deactivate:
+                    await client.apply_archive_zero_out(
+                        row_number=5,
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
-                            # Verify product was deactivated
-                            mock_deactivate.assert_called_once()
-                            call_kwargs = mock_deactivate.call_args.kwargs
-                            assert call_kwargs["active"] is False
+                    # Verify product was deactivated
+                    mock_deactivate.assert_called_once()
+                    call_kwargs = mock_deactivate.call_args.kwargs
+                    assert call_kwargs["active"] is False
 
     @pytest.mark.asyncio
     async def test_archive_zero_stock_no_log(
@@ -156,15 +153,14 @@ class TestApplyArchiveZeroOut:
 
             with patch.object(
                 client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
-                with patch.object(
-                    client, "update_product_active", new_callable=AsyncMock
-                ):
-                    result = await client.apply_archive_zero_out(
-                        row_number=5,
-                        actor_id=123456,
-                        actor_username="testuser",
-                    )
+            ) as mock_append, patch.object(
+                client, "update_product_active", new_callable=AsyncMock
+            ):
+                result = await client.apply_archive_zero_out(
+                    row_number=5,
+                    actor_id=123456,
+                    actor_username="testuser",
+                )
 
             # Verify no log entry was made
             mock_append.assert_not_called()
@@ -239,23 +235,21 @@ class TestApplyArchiveZeroOut:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
+                ) as mock_increment, patch.object(
+                    client, "update_product_active", new_callable=AsyncMock
                 ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ) as mock_increment:
-                        with patch.object(
-                            client, "update_product_active", new_callable=AsyncMock
-                        ):
-                            await client.apply_archive_zero_out(
-                                row_number=5,
-                                actor_id=123456,
-                                actor_username="testuser",
-                            )
+                    await client.apply_archive_zero_out(
+                        row_number=5,
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
-                            # Verify increment was called with full stock amount
-                            mock_increment.assert_called_once_with(
-                                5, "Списано_всего", 15
-                            )
+                    # Verify increment was called with full stock amount
+                    mock_increment.assert_called_once_with(
+                        5, "Списано_всего", 15
+                    )
 
     @pytest.mark.asyncio
     async def test_archive_fails_if_log_fails(

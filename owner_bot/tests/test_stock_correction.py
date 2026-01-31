@@ -1,10 +1,11 @@
 """Tests for stock correction functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.sheets import SheetsClient
+import pytest
+
 from app.models import Product
+from app.sheets import SheetsClient
 
 
 @pytest.fixture
@@ -63,17 +64,16 @@ class TestApplyCorrection:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
                 ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ):
-                        result = await client.apply_correction(
-                            row_number=5,
-                            new_stock=37,  # delta = -5
-                            reason="инвентаризация",
-                            actor_id=123456,
-                            actor_username="testuser",
-                        )
+                    result = await client.apply_correction(
+                        row_number=5,
+                        new_stock=37,  # delta = -5
+                        reason="инвентаризация",
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
             # Verify log entry went to Списание
             mock_append.assert_called_once()
@@ -108,17 +108,16 @@ class TestApplyCorrection:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
                 ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ):
-                        result = await client.apply_correction(
-                            row_number=5,
-                            new_stock=50,  # delta = +8
-                            reason="пересорт",
-                            actor_id=123456,
-                            actor_username="testuser",
-                        )
+                    result = await client.apply_correction(
+                        row_number=5,
+                        new_stock=50,  # delta = +8
+                        reason="пересорт",
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
             # Verify log entry went to Внесение
             mock_append.assert_called_once()
@@ -229,19 +228,18 @@ class TestApplyCorrection:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
-                ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ) as mock_increment:
-                        await client.apply_correction(
-                            row_number=5,
-                            new_stock=37,  # delta = -5
-                            reason="инвентаризация",
-                            actor_id=123456,
-                            actor_username="testuser",
-                        )
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
+                ) as mock_increment:
+                    await client.apply_correction(
+                        row_number=5,
+                        new_stock=37,  # delta = -5
+                        reason="инвентаризация",
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
-                        mock_increment.assert_called_once_with(5, "Списано_всего", 5)
+                    mock_increment.assert_called_once_with(5, "Списано_всего", 5)
 
     @pytest.mark.asyncio
     async def test_correction_updates_vneseno_vsego_for_increase(
@@ -262,19 +260,18 @@ class TestApplyCorrection:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
-                ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ) as mock_increment:
-                        await client.apply_correction(
-                            row_number=5,
-                            new_stock=50,  # delta = +8
-                            reason="пересорт",
-                            actor_id=123456,
-                            actor_username="testuser",
-                        )
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
+                ) as mock_increment:
+                    await client.apply_correction(
+                        row_number=5,
+                        new_stock=50,  # delta = +8
+                        reason="пересорт",
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
-                        mock_increment.assert_called_once_with(5, "Внесено_всего", 8)
+                    mock_increment.assert_called_once_with(5, "Внесено_всего", 8)
 
     @pytest.mark.asyncio
     async def test_correction_preserves_operation_id(
@@ -295,17 +292,16 @@ class TestApplyCorrection:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
                 ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ):
-                        result = await client.apply_correction(
-                            row_number=5,
-                            new_stock=37,
-                            reason="инвентаризация",
-                            actor_id=123456,
-                            actor_username="testuser",
-                            operation_id="my_op_id",
-                        )
+                    result = await client.apply_correction(
+                        row_number=5,
+                        new_stock=37,
+                        reason="инвентаризация",
+                        actor_id=123456,
+                        actor_username="testuser",
+                        operation_id="my_op_id",
+                    )
 
         assert result.operation_id == "my_op_id"

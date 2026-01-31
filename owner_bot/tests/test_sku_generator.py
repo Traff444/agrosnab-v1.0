@@ -3,8 +3,6 @@
 import re
 from datetime import datetime
 
-import pytest
-
 
 class TestSKUGeneration:
     """Test cases for SKU generation in sheets client."""

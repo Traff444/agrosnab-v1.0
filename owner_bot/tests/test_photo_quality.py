@@ -1,9 +1,8 @@
 """Tests for photo quality analysis."""
 
-import pytest
 
-from app.photo_quality import analyze_photo, format_quality_report
 from app.models import PhotoStatus
+from app.photo_quality import analyze_photo, format_quality_report
 
 
 class TestAnalyzePhoto:

@@ -1,9 +1,10 @@
 """Tests for sheets self-heal functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.sheets import SheetsClient, LOG_COLUMNS
+import pytest
+
+from app.sheets import LOG_COLUMNS, SheetsClient
 
 
 @pytest.fixture

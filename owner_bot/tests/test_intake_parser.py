@@ -1,8 +1,7 @@
 """Tests for intake string parser."""
 
-import pytest
 
-from app.intake_parser import parse_intake_string, format_parsed_intake
+from app.intake_parser import format_parsed_intake, parse_intake_string
 from app.models import IntakeConfidence
 
 

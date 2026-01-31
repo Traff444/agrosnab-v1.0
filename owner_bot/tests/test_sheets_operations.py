@@ -1,7 +1,8 @@
 """Tests for Google Sheets operations."""
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
 class TestColumnMapping:
@@ -140,7 +141,6 @@ class TestSearchProducts:
     async def test_search_by_name(self):
         """Test searching products by name."""
         from app.sheets import SheetsClient
-        from app.models import Product
 
         # Create client and mock its service
         client = SheetsClient()

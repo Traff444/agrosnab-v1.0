@@ -1,8 +1,8 @@
 """Tests for security module."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, AsyncMock
 
 
 class TestWhitelistMiddleware:
@@ -12,6 +12,7 @@ class TestWhitelistMiddleware:
     async def test_allows_whitelisted_user(self, monkeypatch):
         """Test that whitelisted user is allowed."""
         from aiogram.types import Message
+
         from app.config import Settings
 
         settings = Settings(
@@ -44,6 +45,7 @@ class TestWhitelistMiddleware:
     async def test_blocks_non_whitelisted_user(self, monkeypatch):
         """Test that non-whitelisted user is blocked."""
         from aiogram.types import Message
+
         from app.config import Settings
 
         settings = Settings(
@@ -78,6 +80,7 @@ class TestWhitelistMiddleware:
     async def test_handles_callback_query(self, mock_settings):
         """Test handling of CallbackQuery."""
         from aiogram.types import CallbackQuery
+
         from app.security import WhitelistMiddleware
 
         middleware = WhitelistMiddleware()

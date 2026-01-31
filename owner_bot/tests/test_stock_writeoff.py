@@ -1,10 +1,11 @@
 """Tests for stock writeoff functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.sheets import SheetsClient, StockOperationResult
+import pytest
+
 from app.models import Product
+from app.sheets import SheetsClient, StockOperationResult
 
 
 @pytest.fixture
@@ -106,17 +107,16 @@ class TestApplyWriteoff:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
                 ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ):
-                        await client.apply_writeoff(
-                            row_number=5,
-                            qty=3,
-                            reason="подарок",
-                            actor_id=123456,
-                            actor_username="testuser",
-                        )
+                    await client.apply_writeoff(
+                        row_number=5,
+                        qty=3,
+                        reason="подарок",
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
             # Verify append_log_entry was called with correct params
             mock_append.assert_called_once()
@@ -288,20 +288,19 @@ class TestApplyWriteoff:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
-                ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ) as mock_increment:
-                        await client.apply_writeoff(
-                            row_number=5,
-                            qty=3,
-                            reason="порча",
-                            actor_id=123456,
-                            actor_username="testuser",
-                        )
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
+                ) as mock_increment:
+                    await client.apply_writeoff(
+                        row_number=5,
+                        qty=3,
+                        reason="порча",
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
-                        # Verify _increment_total_column was called
-                        mock_increment.assert_called_once_with(5, "Списано_всего", 3)
+                    # Verify _increment_total_column was called
+                    mock_increment.assert_called_once_with(5, "Списано_всего", 3)
 
     @pytest.mark.asyncio
     async def test_writeoff_preserves_operation_id_for_retry(
@@ -322,19 +321,18 @@ class TestApplyWriteoff:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
                 ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ):
-                        # Test with provided operation_id
-                        result = await client.apply_writeoff(
-                            row_number=5,
-                            qty=3,
-                            reason="порча",
-                            actor_id=123456,
-                            actor_username="testuser",
-                            operation_id="my_custom_op_id",
-                        )
+                    # Test with provided operation_id
+                    result = await client.apply_writeoff(
+                        row_number=5,
+                        qty=3,
+                        reason="порча",
+                        actor_id=123456,
+                        actor_username="testuser",
+                        operation_id="my_custom_op_id",
+                    )
 
         assert result.operation_id == "my_custom_op_id"
 
@@ -357,17 +355,16 @@ class TestApplyWriteoff:
 
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
+                ), patch.object(
+                    client, "_increment_total_column", new_callable=AsyncMock
                 ):
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ):
-                        result = await client.apply_writeoff(
-                            row_number=5,
-                            qty=3,
-                            reason="порча",
-                            actor_id=123456,
-                            actor_username="testuser",
-                        )
+                    result = await client.apply_writeoff(
+                        row_number=5,
+                        qty=3,
+                        reason="порча",
+                        actor_id=123456,
+                        actor_username="testuser",
+                    )
 
         # Should have generated an operation_id
         assert result.operation_id is not None
