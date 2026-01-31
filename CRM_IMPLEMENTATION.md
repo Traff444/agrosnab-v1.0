@@ -153,7 +153,22 @@ tests/test_crm.py::test_crm_messages_isolation
 tests/test_crm.py::test_crm_message_truncation
 ```
 
-**Результат:** 240 тестов пройдено (весь проект)
+**Результат:** Все тесты пройдены
+
+### CI Pipeline
+
+Тесты автоматически запускаются через GitHub Actions:
+- `.github/workflows/ci.yml` — lint + test для обоих ботов
+- Запускается при push и PR
+
+**Локальный запуск:**
+```bash
+# Shop Bot (из корня)
+pytest tests/test_crm.py -v
+
+# Owner Bot
+cd owner_bot && pytest tests/ -v
+```
 
 ---
 

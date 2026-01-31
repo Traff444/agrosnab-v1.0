@@ -130,10 +130,13 @@ function isValidImageUrl(url: string): boolean {
 | Компонент | Файл | Покрытие |
 |-----------|------|----------|
 | Owner Bot Security | `owner_bot/tests/test_security.py` | Высокое |
+| Shop Bot Handlers | `tests/test_*.py` | Среднее (25 тестов исправлено в v1.5) |
 | CDEK Integration | `tests/test_cdek.py`, `tests/test_cdek_demo.py` | Среднее |
 | Photo Quality | `owner_bot/tests/test_photo_quality.py` | Высокое |
 | SKU Generator | `owner_bot/tests/test_sku_generator.py` | Высокое |
 | Intake Parser | `owner_bot/tests/test_intake_parser.py` | Среднее |
+
+**CI Pipeline:** Тесты автоматически запускаются для обоих ботов при push/PR (`.github/workflows/ci.yml`).
 
 **Пример качественного теста (`owner_bot/tests/test_security.py:43-75`):**
 ```python
@@ -188,14 +191,14 @@ def setup_sentry():
 
 ### 1.6 Рекомендации программиста
 
-| Приоритет | Рекомендация | Обоснование |
-|-----------|--------------|-------------|
-| КРИТИЧЕСКИЙ | Добавить unit тесты для Shop Bot | Нет тестов для `app/handlers/`, `app/ai_manager.py` |
-| ВЫСОКИЙ | Webhook вместо polling | `dp.start_polling()` не подходит для production с высокой нагрузкой |
-| ВЫСОКИЙ | Rate limiting для AI Manager | OpenAI имеет лимиты, нужен throttling |
-| СРЕДНИЙ | PostgreSQL вместо SQLite | `confirm_actions.db` не масштабируется для multi-instance |
-| СРЕДНИЙ | Health check endpoint | Для Kubernetes/Docker Swarm |
-| НИЗКИЙ | OpenAPI схема для Apps Script | Документация API для сайта |
+| Приоритет | Рекомендация | Обоснование | Статус |
+|-----------|--------------|-------------|--------|
+| КРИТИЧЕСКИЙ | Добавить unit тесты для Shop Bot | Нет тестов для `app/handlers/`, `app/ai_manager.py` | ✅ Частично (25 тестов добавлено в v1.5) |
+| ВЫСОКИЙ | Webhook вместо polling | `dp.start_polling()` не подходит для production с высокой нагрузкой | ⏳ В планах |
+| ВЫСОКИЙ | Rate limiting для AI Manager | OpenAI имеет лимиты, нужен throttling | ⏳ В планах |
+| СРЕДНИЙ | PostgreSQL вместо SQLite | `confirm_actions.db` не масштабируется для multi-instance | ⏳ В планах |
+| СРЕДНИЙ | Health check endpoint | Для Kubernetes/Docker Swarm | ⏳ В планах |
+| НИЗКИЙ | OpenAPI схема для Apps Script | Документация API для сайта | ⏳ В планах |
 
 ---
 

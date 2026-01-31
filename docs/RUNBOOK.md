@@ -1,6 +1,91 @@
 # Операционные процедуры (Runbook)
 
-## Деплой
+## GitHub Pages деплой (Сайт)
+
+Сайт автоматически деплоится через GitHub Actions при push в `main`.
+
+**Workflow:** `.github/workflows/deploy.yml`
+
+**Процесс:**
+1. Push в `main` → запускается GitHub Actions
+2. Сборка: `npm run build` в папке `sitemahorkaproject/`
+3. Деплой: `dist/` → GitHub Pages
+
+**Конфигурация:**
+- `.env.production` содержит `VITE_APPS_SCRIPT_URL` для production
+- Base path: `/agrosnab/` (настроен в `vite.config.ts`)
+
+**Проверка статуса:**
+- Actions: https://github.com/[owner]/[repo]/actions
+- Сайт: https://[owner].github.io/agrosnab/
+
+---
+
+## CI Pipeline
+
+Автоматическая проверка при push/PR.
+
+**Workflow:** `.github/workflows/ci.yml`
+
+**Проверки для обоих ботов:**
+- `ruff check` — линтер Python
+- `ruff format --check` — проверка форматирования
+- `pytest` — запуск тестов
+
+**Запуск локально:**
+```bash
+# Shop Bot
+ruff check app/ && ruff format --check app/ && pytest tests/
+
+# Owner Bot
+cd owner_bot
+ruff check app/ && ruff format --check app/ && pytest tests/
+```
+
+---
+
+## Деплой ботов (Docker)
+
+### Shop Bot
+
+```bash
+# Из корня проекта
+docker compose up --build -d
+
+# Логи
+docker compose logs -f bot
+
+# Остановка
+docker compose down
+```
+
+### Owner Bot
+
+```bash
+# Из owner_bot/
+cd owner_bot
+docker compose up --build -d
+
+# Логи
+docker compose logs -f owner-bot
+
+# Остановка
+docker compose down
+```
+
+### Оба бота одновременно
+
+```bash
+# Терминал 1 (корень)
+docker compose up --build -d
+
+# Терминал 2 (owner_bot)
+cd owner_bot && docker compose up --build -d
+```
+
+---
+
+## Деплой (Сайт)
 
 ### Production-сборка
 

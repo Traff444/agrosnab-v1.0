@@ -38,7 +38,21 @@ excel-telegram-bot-starter/
 │   ├── keyboards.py     # Inline и Reply клавиатуры
 │   ├── ai_manager.py    # OpenAI интеграция с tool calling
 │   ├── invoice.py       # Генерация PDF счетов
-│   └── utils.py         # Вспомогательные функции
+│   ├── utils.py         # Вспомогательные функции
+│   ├── handlers/        # Обработчики команд
+│   │   ├── start.py     # /start и меню
+│   │   ├── catalog.py   # Каталог и навигация
+│   │   ├── cart.py      # Корзина и checkout
+│   │   └── ai.py        # AI-менеджер
+│   ├── services/        # Бизнес-логика
+│   │   ├── cart_service.py    # Операции с корзиной
+│   │   └── product_service.py # Операции с товарами
+│   └── storage/         # Модули хранения данных
+│       └── ...          # SQLite persistence
+├── .github/
+│   └── workflows/
+│       ├── ci.yml       # CI: lint + test для обоих ботов
+│       └── deploy.yml   # CD: GitHub Pages для сайта
 ├── docker-compose.yml   # Docker конфигурация
 ├── Dockerfile           # Образ Python 3.11
 ├── requirements.txt     # Зависимости
@@ -46,6 +60,20 @@ excel-telegram-bot-starter/
 └── secrets/
     └── service_account.json  # Google сервисный аккаунт
 ```
+
+---
+
+## 🔄 CI/CD
+
+### CI Pipeline (`.github/workflows/ci.yml`)
+
+Запускается при push и PR:
+- **Shop Bot:** `ruff check`, `ruff format --check`, `pytest`
+- **Owner Bot:** `ruff check`, `ruff format --check`, `pytest`
+
+### CD Pipeline (`.github/workflows/deploy.yml`)
+
+Автоматический деплой сайта на GitHub Pages при push в `main`.
 
 ---
 
@@ -362,6 +390,11 @@ python -m app.main
 ### AI не отвечает
 - Проверьте `OPENAI_API_KEY` в `.env`
 - Проверьте логи на ошибки
+
+### Кнопка "След. ➡️" в каталоге не работала (исправлено v1.4)
+**Причина:** При навигации сначала удалялось сообщение, потом отправлялось новое фото. Если отправка фото падала — callback оставался без ответа.
+
+**Решение:** Изменён порядок операций — сначала отправляется новое сообщение с фото, потом удаляется старое. Fallback на edit_text если фото недоступно.
 
 ---
 

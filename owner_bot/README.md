@@ -339,6 +339,23 @@ docker inspect --format='{{.State.Health.Status}}' owner-bot
 # healthy / unhealthy
 ```
 
+## Производительность
+
+### TTL-кэш товаров (Phase 3.1, 2026-01-31)
+
+`ProductService` кэширует список товаров для быстрого поиска:
+- TTL: 5 минут (настраивается)
+- Автоматическая инвалидация при изменении товара
+- Снижает нагрузку на Google Sheets API
+- Добавлен в v1.5
+
+### SQLite persistence
+
+Intake sessions хранятся в SQLite для защиты от потери данных:
+- TTL: 24 часа
+- Восстановление сессий после перезапуска бота
+- Автоматическая очистка устаревших записей
+
 ## Структура проекта
 
 ```
@@ -348,7 +365,16 @@ owner_bot/
 │   ├── models.py          # Dataclasses
 │   ├── security.py        # Whitelist + ConfirmAction
 │   ├── monitoring.py      # Sentry, алерты, retry логика
-│   ├── sheets.py          # Google Sheets клиент
+│   ├── sheets/            # Google Sheets клиент (модуль)
+│   │   ├── __init__.py    # Экспорт GoogleSheetsClient
+│   │   ├── client.py      # GoogleSheetsClient — основной клиент
+│   │   ├── products.py    # CRUD операции с товарами
+│   │   ├── logging.py     # Логирование операций (Внесение/Списание)
+│   │   ├── cache.py       # Кэширование данных
+│   │   ├── crm.py         # CRM операции
+│   │   ├── constants.py   # Константы (названия листов, колонок)
+│   │   ├── models.py      # Модели данных
+│   │   └── utils.py       # Вспомогательные функции
 │   ├── drive.py           # Google Drive клиент
 │   ├── cloudinary_client.py  # Cloudinary для фото
 │   ├── photo_quality.py   # Анализ качества фото
@@ -359,14 +385,23 @@ owner_bot/
 │   │   ├── critical.py    # /start, /cancel, /help
 │   │   ├── start.py
 │   │   ├── intake.py      # FSM приход товара
-│   │   ├── products.py    # Поиск и операции с товарами
+│   │   ├── products/      # Поиск и операции с товарами (модуль)
+│   │   │   ├── __init__.py
+│   │   │   ├── search.py      # Поиск товаров
+│   │   │   ├── card.py        # Карточка товара
+│   │   │   ├── writeoff.py    # Списание
+│   │   │   ├── correction.py  # Корректировка остатка
+│   │   │   ├── archive.py     # Архивация
+│   │   │   ├── confirmation.py # Подтверждение операций
+│   │   │   ├── navigation.py  # Навигация (back, start_search)
+│   │   │   └── states.py      # FSM состояния
 │   │   ├── stock.py       # Просмотр склада с пагинацией
 │   │   ├── orders.py
 │   │   ├── crm.py         # CRM-функции
 │   │   └── health.py
 │   ├── services/          # Бизнес-логика
-│   │   ├── product_service.py
-│   │   └── intake_service.py
+│   │   ├── product_service.py  # TTL-кэш товаров (5 мин)
+│   │   └── intake_service.py   # SQLite persistence (24h TTL)
 │   └── main.py            # Точка входа
 └── tests/                 # Тесты
 ```
@@ -377,6 +412,15 @@ owner_bot/
 cd owner_bot
 pytest -v
 ```
+
+### CI Pipeline
+
+Тесты автоматически запускаются при push/PR через GitHub Actions:
+- `ruff check app/` — линтер
+- `ruff format --check app/` — форматирование
+- `pytest tests/` — тесты
+
+См. `.github/workflows/ci.yml`
 
 ## Лицензия
 

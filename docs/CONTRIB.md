@@ -47,6 +47,15 @@ npm run dev
 npm run typecheck && npm run lint && npm run build
 ```
 
+### CI при PR
+
+При создании PR автоматически запускается CI pipeline:
+- **Сайт:** typecheck, lint, build
+- **Shop Bot:** ruff check, ruff format, pytest
+- **Owner Bot:** ruff check, ruff format, pytest
+
+Убедитесь, что все проверки проходят перед мержем.
+
 ## Переменные окружения
 
 | Переменная | Обязательная | Описание |

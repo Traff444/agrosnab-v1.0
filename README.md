@@ -94,6 +94,8 @@ React-приложение для отображения каталога тов
 
 **Папка:** [sitemahorkaproject/](./sitemahorkaproject/)
 
+**Деплой:** Автоматический через GitHub Actions → GitHub Pages. Для production используется `.env.production` с `VITE_APPS_SCRIPT_URL`.
+
 ### Архитектура
 
 ```
@@ -261,6 +263,36 @@ clasp deploy --description "vX.X"
 ```
 https://script.google.com/macros/s/AKfycbzJ31qZN_j6opR-uEteEdZbo1w6GjXUyQWdr9Lmjp384jjrvyE7smmPqVQz2TMC12oS/exec
 ```
+
+---
+
+## Changelog
+
+### v1.5 (2026-01-31)
+- **fix:** GitHub Pages деплой — убран пустой `env:` блок из deploy.yml, добавлен `.env.production`
+- **feat:** TTL-кэш товаров в Owner Bot (5 мин) — снижает нагрузку на Google Sheets API
+- **fix:** Исправлено 25 failing tests в shop_bot
+- **ci:** Расширен CI pipeline для обоих ботов (lint + test)
+- **refactor:** Улучшены type hints в storage модулях
+
+### v1.4 (2026-01-31)
+- **fix:** Исправлена навигация по каталогу — кнопки "След. ➡️" и "⬅️ Пред." теперь работают корректно
+  - Изменён порядок операций: сначала отправляется новое сообщение, потом удаляется старое
+  - Добавлено логирование ошибок отправки фото
+
+### v1.3
+- CRM система: воронка продаж, история сообщений, AI-сводки
+
+### v1.2
+- Owner Bot: управление складом, загрузка фото
+
+### v1.1
+- Листы "Внесение" и "Списание" с двухстрочными заголовками
+- Автосписание при заказе
+
+### v1.0
+- Shop Bot: каталог, корзина, оформление заказов
+- Интеграция с Google Sheets и CDEK
 
 ---
 
