@@ -1,18 +1,22 @@
 """Stock listing handlers."""
 
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+import logging
+
+from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 
 from app.keyboards import (
-    stock_list_keyboard,
     main_menu_keyboard,
     product_actions_keyboard,
+    stock_list_keyboard,
 )
-from app.sheets import sheets_client
 from app.services.product_service import product_service
+from app.sheets import sheets_client
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 ITEMS_PER_PAGE = 8
 
@@ -77,10 +81,17 @@ async def stock_page(callback: CallbackQuery, state: FSMContext) -> None:
         "Выберите товар:"
     )
 
-    await callback.message.edit_text(
-        text,
-        reply_markup=stock_list_keyboard(page_products, page, total_pages),
-    )
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=stock_list_keyboard(page_products, page, total_pages),
+        )
+    except TelegramBadRequest as e:
+        logger.debug("Cannot edit stock list message: %s", e)
+        await callback.message.answer(
+            text,
+            reply_markup=stock_list_keyboard(page_products, page, total_pages),
+        )
     await callback.answer()
 
 
@@ -102,15 +113,25 @@ async def stock_select(callback: CallbackQuery, state: FSMContext) -> None:
         current_product_sku=product.sku,
     )
 
-    await callback.message.edit_text(
-        card,
-        reply_markup=product_actions_keyboard(product),
-    )
+    try:
+        await callback.message.edit_text(
+            card,
+            reply_markup=product_actions_keyboard(product),
+        )
+    except TelegramBadRequest as e:
+        logger.debug("Cannot edit to product card: %s", e)
+        await callback.message.answer(
+            card,
+            reply_markup=product_actions_keyboard(product),
+        )
     await callback.answer()
 
 
 @router.callback_query(F.data == "stock_close")
 async def stock_close(callback: CallbackQuery, state: FSMContext) -> None:
     """Close stock list."""
-    await callback.message.delete()
+    try:
+        await callback.message.delete()
+    except TelegramBadRequest as e:
+        logger.debug("Cannot delete stock list message: %s", e)
     await callback.answer()

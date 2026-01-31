@@ -3,12 +3,12 @@
 from aiogram import Router
 
 from app.handlers.critical import router as critical_router
-from app.handlers.start import router as start_router
-from app.handlers.intake import router as intake_router
-from app.handlers.products import router as products_router
-from app.handlers.orders import router as orders_router
-from app.handlers.health import router as health_router
 from app.handlers.crm import router as crm_router
+from app.handlers.health import router as health_router
+from app.handlers.intake import router as intake_router
+from app.handlers.orders import router as orders_router
+from app.handlers.products import router as products_router
+from app.handlers.start import router as start_router
 from app.handlers.stock import router as stock_router
 
 

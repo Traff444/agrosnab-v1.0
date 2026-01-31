@@ -1,44 +1,50 @@
-"""Cart storage - backward compatibility wrapper.
+"""Storage package for SQLite-backed data.
 
-This module re-exports from the new storage package for backward compatibility.
-New code should import directly from app.storage package.
+This package provides modular storage for:
+- db.py: Database configuration and initialization
+- cart.py: Shopping cart and checkout sessions
+- chat_history.py: AI chat history
+- crm.py: CRM events and messages
 """
 
-from .storage import (
-    DB_PATH,
-    EVENT_TO_STAGE,
-    MAX_CRM_MESSAGES,
-    MAX_HISTORY_MESSAGES,
-    STAGE_PRIORITY,
-    add_chat_message,
+from .cart import (
     add_to_cart,
     cleanup_old_checkout_sessions,
     clear_cart,
-    clear_chat_history,
     compute_cart_hash,
+    get_cart,
+    get_or_create_checkout_session,
+    mark_checkout_complete,
+    remove_from_cart,
+    set_qty,
+)
+from .chat_history import (
+    MAX_HISTORY_MESSAGES,
+    add_chat_message,
+    clear_chat_history,
+    get_ai_mode,
+    get_chat_history,
+    set_ai_mode,
+)
+from .crm import (
+    EVENT_TO_STAGE,
+    MAX_CRM_MESSAGES,
+    STAGE_PRIORITY,
     compute_stage,
     format_messages_for_ai,
-    get_ai_mode,
-    get_cart,
-    get_chat_history,
     get_daily_stats,
     get_first_seen,
     get_last_seen,
-    get_or_create_checkout_session,
     get_user_events,
     get_user_messages,
     get_user_messages_count,
     get_user_orders_count,
     get_user_stage,
     has_user_consent,
-    init_db,
     log_crm_event,
     log_crm_message,
-    mark_checkout_complete,
-    remove_from_cart,
-    set_ai_mode,
-    set_qty,
 )
+from .db import DB_PATH, init_db
 
 __all__ = [
     # Database

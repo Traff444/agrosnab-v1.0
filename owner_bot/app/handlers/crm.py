@@ -2,21 +2,56 @@
 
 import logging
 from datetime import datetime
+from typing import Any
 
-from aiogram import Router, F
+from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.config import get_settings
+from app.crm_db import (
+    format_messages_for_display,
+    generate_ai_summary,
+    get_user_messages_count,
+)
 from app.keyboards import main_menu_keyboard
 from app.sheets import sheets_client
-from app.config import get_settings
-from app.crm_db import get_user_messages, get_user_messages_count, format_messages_for_display, generate_ai_summary
 
 logger = logging.getLogger(__name__)
 
 router = Router()
+
+
+async def _safe_edit_text(
+    cb: CallbackQuery,
+    text: str,
+    reply_markup: Any = None,
+    **kwargs: Any,
+) -> bool:
+    """Safely edit message text, fallback to answer on failure."""
+    try:
+        await cb.message.edit_text(text, reply_markup=reply_markup, **kwargs)
+        return True
+    except TelegramBadRequest as e:
+        logger.debug("Cannot edit CRM message: %s", e)
+        await cb.message.answer(text, reply_markup=reply_markup, **kwargs)
+        return False
+
+
+async def _safe_edit_reply_markup(
+    cb: CallbackQuery,
+    reply_markup: Any = None,
+) -> bool:
+    """Safely edit reply markup."""
+    try:
+        await cb.message.edit_reply_markup(reply_markup=reply_markup)
+        return True
+    except TelegramBadRequest as e:
+        logger.debug("Cannot edit CRM reply markup: %s", e)
+        return False
 
 
 # Stage emoji mapping
@@ -112,10 +147,7 @@ def format_lead_card(lead: dict) -> str:
     last_order = lead.get('last_order_id', '') or '—'
 
     phone = lead.get('phone', '')
-    if phone and len(phone) > 6:
-        phone_masked = phone[:4] + '***' + phone[-2:]
-    else:
-        phone_masked = phone or '—'
+    phone_masked = phone[:4] + '***' + phone[-2:] if phone and len(phone) > 6 else phone or '—'
 
     tags = lead.get('tags', '') or '—'
     notes = lead.get('notes', '') or '—'
@@ -191,9 +223,7 @@ async def cmd_crm(message: Message) -> None:
 async def crm_back(cb: CallbackQuery, state: FSMContext) -> None:
     """Return to main menu."""
     await state.clear()
-    await cb.message.edit_text(
-        "🏠 Возврат в главное меню",
-    )
+    await _safe_edit_text(cb, "🏠 Возврат в главное меню")
     await cb.message.answer(
         "Выберите действие:",
         reply_markup=main_menu_keyboard(),
@@ -220,13 +250,14 @@ async def crm_funnel(cb: CallbackQuery) -> None:
         ]
     )
 
-    await cb.message.edit_text(text, reply_markup=kb)
+    await _safe_edit_text(cb, text, reply_markup=kb)
 
 
 @router.callback_query(F.data == "crm:menu")
 async def crm_menu(cb: CallbackQuery) -> None:
     """Return to CRM menu."""
-    await cb.message.edit_text(
+    await _safe_edit_text(
+        cb,
         "📊 *CRM — Управление клиентами*\n\n"
         "Выберите действие:",
         reply_markup=crm_menu_keyboard(),
@@ -246,7 +277,8 @@ async def crm_leads(cb: CallbackQuery) -> None:
         leads = []
 
     if not leads:
-        await cb.message.edit_text(
+        await _safe_edit_text(
+            cb,
             "👥 *Последние лиды*\n\n"
             "Список пуст. Пока нет данных о клиентах.",
             reply_markup=InlineKeyboardMarkup(
@@ -276,7 +308,7 @@ async def crm_leads(cb: CallbackQuery) -> None:
     builder.adjust(1)
     builder.button(text="🔙 Назад", callback_data="crm:menu")
 
-    await cb.message.edit_text(text, reply_markup=builder.as_markup())
+    await _safe_edit_text(cb, text, reply_markup=builder.as_markup())
 
 
 @router.callback_query(F.data.startswith("crm:lead:"))
@@ -292,7 +324,8 @@ async def crm_lead_detail(cb: CallbackQuery) -> None:
 
     lead = await sheets_client.get_lead_by_user_id(user_id)
     if not lead:
-        await cb.message.edit_text(
+        await _safe_edit_text(
+            cb,
             f"❌ Клиент #{user_id} не найден",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
@@ -305,7 +338,7 @@ async def crm_lead_detail(cb: CallbackQuery) -> None:
     text = format_lead_card(lead)
     kb = lead_card_keyboard(user_id)
 
-    await cb.message.edit_text(text, reply_markup=kb)
+    await _safe_edit_text(cb, text, reply_markup=kb)
 
 
 @router.callback_query(F.data.startswith("crm:history:"))
@@ -323,7 +356,8 @@ async def crm_message_history(cb: CallbackQuery) -> None:
     msg_count = await get_user_messages_count(user_id)
 
     if msg_count == 0:
-        await cb.message.edit_text(
+        await _safe_edit_text(
+            cb,
             f"📜 *История сообщений #{user_id}*\n\n"
             "Нет сохранённых сообщений.\n\n"
             "_Сообщения сохраняются только при наличии согласия клиента._",
@@ -367,7 +401,8 @@ async def crm_message_history(cb: CallbackQuery) -> None:
         [InlineKeyboardButton(text="🔙 CRM меню", callback_data="crm:menu")],
     ])
 
-    await cb.message.edit_text(
+    await _safe_edit_text(
+        cb,
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard_rows),
     )
@@ -401,7 +436,8 @@ async def crm_ai_summary(cb: CallbackQuery) -> None:
         f"{summary}"
     )
 
-    await cb.message.edit_text(
+    await _safe_edit_text(
+        cb,
         text,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
@@ -418,7 +454,8 @@ async def crm_ai_summary(cb: CallbackQuery) -> None:
 async def crm_search_start(cb: CallbackQuery, state: FSMContext) -> None:
     """Start lead search."""
     await state.set_state(CRMState.searching)
-    await cb.message.edit_text(
+    await _safe_edit_text(
+        cb,
         "🔍 *Поиск клиента*\n\n"
         "Введите user\\_id, телефон или имя:",
     )
@@ -553,7 +590,8 @@ async def crm_edit_tags(cb: CallbackQuery) -> None:
     current_tags_str = lead.get('tags', '') if lead else ''
     current_tags = [t.strip() for t in current_tags_str.split(',') if t.strip()]
 
-    await cb.message.edit_text(
+    await _safe_edit_text(
+        cb,
         f"🏷 *Теги для клиента #{user_id}*\n\n"
         "Нажмите на тег чтобы добавить/убрать:",
         reply_markup=tags_keyboard(user_id, current_tags),
@@ -596,9 +634,7 @@ async def crm_toggle_tag(cb: CallbackQuery) -> None:
         return
 
     # Update keyboard
-    await cb.message.edit_reply_markup(
-        reply_markup=tags_keyboard(user_id, current_tags)
-    )
+    await _safe_edit_reply_markup(cb, reply_markup=tags_keyboard(user_id, current_tags))
     await cb.answer(f"{'➕' if tag in current_tags else '➖'} {tag}")
 
 
@@ -612,7 +648,8 @@ async def crm_daily_report(cb: CallbackQuery) -> None:
         orders = await sheets_client.get_orders_summary()
     except Exception as e:
         logger.error(f"Failed to get report: {e}")
-        await cb.message.edit_text(
+        await _safe_edit_text(
+            cb,
             "❌ Не удалось загрузить отчёт",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
@@ -654,4 +691,4 @@ async def crm_daily_report(cb: CallbackQuery) -> None:
         ]
     )
 
-    await cb.message.edit_text(text, reply_markup=kb)
+    await _safe_edit_text(cb, text, reply_markup=kb)
