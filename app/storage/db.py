@@ -10,11 +10,15 @@ import aiosqlite
 
 logger = logging.getLogger(__name__)
 
-# Use relative path for local development, absolute for Docker
-_DATA_DIR = Path(__file__).parent.parent.parent / "data"
-if os.path.exists("/app/data"):
+# Support test database via environment variable
+_TEST_DB_PATH = os.environ.get("SHOP_BOT_TEST_DB_PATH")
+
+if _TEST_DB_PATH:
+    DB_PATH = _TEST_DB_PATH
+elif os.path.exists("/app/data"):
     DB_PATH = "/app/data/bot.sqlite3"
 else:
+    _DATA_DIR = Path(__file__).parent.parent.parent / "data"
     _DATA_DIR.mkdir(exist_ok=True)
     DB_PATH = str(_DATA_DIR / "bot.sqlite3")
 
