@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+import asyncio
 import logging
+from datetime import datetime
 
 from aiogram import Dispatcher, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, FSInputFile, Message
 
 from .. import cart_store
-from ..config import Settings
 from ..cdek import CdekPvz, get_cdek_client
+from ..config import Settings
 from ..invoice import generate_invoice_pdf
 from ..keyboards import city_select_kb, delivery_confirm_kb, pvz_select_kb
 from ..services import CartService, ProductService
@@ -46,15 +48,18 @@ def register_cart_handlers(
         state: FSMContext,
     ) -> None:
         """Create invoice, write order to sheets, send PDF, clear cart and state."""
-        products_by_sku = product_service.get_products_by_sku()
-        cart_items = await cart_store.get_cart(user_id)
+        # Parallel fetch: cart items and total calculation
+        cart_items, (_, total, _) = await asyncio.gather(
+            cart_store.get_cart(user_id),
+            cart_service.calc_cart_for_checkout(user_id),
+        )
 
         if not cart_items:
             await message.answer("Корзина пуста. Начните сначала.")
             await state.clear()
             return
 
-        _, total, _ = await cart_service.calc_cart_for_checkout(user_id)
+        products_by_sku = product_service.get_products_by_sku()
 
         # Idempotent checkout: get or create session to avoid duplicate orders
         order_id, _ = await cart_store.get_or_create_checkout_session(
@@ -188,10 +193,11 @@ def register_cart_handlers(
         # Try to edit, if fails (photo message) - delete and send new
         try:
             await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-        except Exception:
+        except TelegramBadRequest as e:
+            logger.debug("Cannot edit message (likely photo): %s", e)
             try:
                 await cb.message.delete()
-            except Exception:
+            except TelegramBadRequest:
                 pass
             await cb.message.answer(text, parse_mode="HTML", reply_markup=kb)
         await cb.answer()
@@ -230,8 +236,8 @@ def register_cart_handlers(
             kb = cart_service.get_cart_keyboard(summary)
             try:
                 await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-            except Exception:
-                pass
+            except TelegramBadRequest as e:
+                logger.debug("Cannot edit cart message: %s", e)
         await cb.answer()
 
     @dp.callback_query(F.data.startswith("cart:dec:"))
@@ -250,8 +256,8 @@ def register_cart_handlers(
         kb = cart_service.get_cart_keyboard(summary)
         try:
             await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-        except Exception:
-            pass
+        except TelegramBadRequest as e:
+            logger.debug("Cannot edit cart message: %s", e)
         await cb.answer()
 
     @dp.callback_query(F.data.startswith("cart:remove:"))
@@ -265,8 +271,8 @@ def register_cart_handlers(
         kb = cart_service.get_cart_keyboard(summary)
         try:
             await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-        except Exception:
-            pass
+        except TelegramBadRequest as e:
+            logger.debug("Cannot edit cart message: %s", e)
         await cb.answer()
 
     @dp.callback_query(F.data == "cart:clear")
@@ -279,19 +285,23 @@ def register_cart_handlers(
         kb = cart_service.get_cart_keyboard(summary)
         try:
             await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-        except Exception:
-            pass
+        except TelegramBadRequest as e:
+            logger.debug("Cannot edit cart message: %s", e)
         await cb.answer()
 
     @dp.callback_query(F.data == "checkout:start")
     async def checkout_start(cb: CallbackQuery, state: FSMContext):
-        cart_items = await cart_store.get_cart(cb.from_user.id)
+        # Parallel fetch: cart items and summary for min check
+        cart_items, summary = await asyncio.gather(
+            cart_store.get_cart(cb.from_user.id),
+            cart_service.get_cart_summary(cb.from_user.id),
+        )
+
         if not cart_items:
             await cb.answer("Корзина пустая")
             return
 
         # min check
-        summary = await cart_service.get_cart_summary(cb.from_user.id)
         if summary.below_min:
             await cb.answer(f"Минималка {summary.min_sum} ₽")
             return
@@ -446,7 +456,8 @@ def register_cart_handlers(
 
         try:
             await cb.message.edit_reply_markup(reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=page))
-        except Exception:
+        except TelegramBadRequest as e:
+            logger.debug("Cannot edit PVZ markup: %s", e)
             await cb.message.answer("Выберите ПВЗ:", reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=page))
         await cb.answer()
 

@@ -1,34 +1,33 @@
 """Intake flow handlers with FSM."""
 
+import contextlib
 import logging
 import os
 from pathlib import Path
 
-from aiogram import Router, F, Bot
-from aiogram.types import Message, CallbackQuery, ContentType
+from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import CallbackQuery, Message
 
 from app.config import get_settings
-
-logger = logging.getLogger(__name__)
+from app.intake_parser import format_parsed_intake
 from app.keyboards import (
-    main_menu_keyboard,
     cancel_keyboard,
     confirm_cancel_keyboard,
+    main_menu_keyboard,
     photo_decision_keyboard,
     photo_quality_keyboard,
     product_match_keyboard,
     retry_keyboard,
 )
-from app.models import IntakeConfidence, PhotoStatus
+from app.models import IntakeConfidence
+from app.photo_enhance import format_enhance_report
+from app.photo_quality import format_quality_report
 from app.services.intake_service import intake_service
 from app.services.product_service import product_service
-from app.intake_parser import format_parsed_intake
-from app.photo_quality import format_quality_report
-from app.photo_enhance import format_enhance_report
 
-
+logger = logging.getLogger(__name__)
 router = Router()
 
 
@@ -54,7 +53,7 @@ async def start_intake(message: Message, state: FSMContext) -> None:
         return
 
     # Create new session
-    session = intake_service.create_session(message.from_user.id)
+    intake_service.create_session(message.from_user.id)
 
     await state.set_state(IntakeState.waiting_for_input)
     await message.answer(
@@ -340,10 +339,8 @@ async def process_photo_review(callback: CallbackQuery, state: FSMContext) -> No
                     f"{result.error_message}"
                 )
             # Clean up tmp file
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
         await _show_preview(callback.message, state, session)
 
     elif callback.data == "photo_enhance":
@@ -367,10 +364,8 @@ async def process_photo_review(callback: CallbackQuery, state: FSMContext) -> No
     elif callback.data == "photo_retake":
         # Clean up and ask for new photo
         if tmp_path:
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
         session.photo_file_id = None
         session.photo_quality = None
         await state.set_state(IntakeState.waiting_for_photo)
@@ -381,10 +376,8 @@ async def process_photo_review(callback: CallbackQuery, state: FSMContext) -> No
 
     elif callback.data == "cancel":
         if tmp_path:
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
         await _cancel_intake(callback, state)
 
 
