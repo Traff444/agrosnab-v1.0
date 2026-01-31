@@ -25,7 +25,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     name = user.first_name if user else "Владелец"
 
     if user:
-        intake_service.clear_session(user.id)
+        await intake_service.clear_session(user.id)
 
     # Lazy cleanup of old tmp files
     deleted = cleanup_tmp_files(max_age_hours=24)
@@ -56,7 +56,7 @@ async def cmd_cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
 
     if message.from_user:
-        intake_service.clear_session(message.from_user.id)
+        await intake_service.clear_session(message.from_user.id)
 
     await message.answer(
         "🏠 Действие отменено. Возврат в главное меню.",
@@ -70,7 +70,7 @@ async def cmd_help(message: Message, state: FSMContext) -> None:
     await state.clear()
 
     if message.from_user:
-        intake_service.clear_session(message.from_user.id)
+        await intake_service.clear_session(message.from_user.id)
 
     await message.answer(
         "📖 **Справка**\n\n"

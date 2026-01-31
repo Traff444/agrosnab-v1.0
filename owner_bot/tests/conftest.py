@@ -3,7 +3,7 @@
 import os
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -73,6 +73,8 @@ def sample_intake_session():
 @pytest.fixture
 def mock_sheets_client(monkeypatch):
     """Mock Google Sheets client."""
+    from app.sheets.models import StockOperationResult
+
     mock = MagicMock()
     mock.load_column_map = AsyncMock(return_value={
         "SKU": 0,
@@ -88,6 +90,12 @@ def mock_sheets_client(monkeypatch):
     mock.create_product = AsyncMock()
     mock.update_product_stock = AsyncMock()
     mock.update_product_photo = AsyncMock()
+    mock.apply_intake = AsyncMock(return_value=StockOperationResult(
+        ok=True,
+        stock_before=0,
+        stock_after=5,
+        operation_id="test_op_123",
+    ))
 
     monkeypatch.setattr("app.sheets.sheets_client", mock)
     return mock

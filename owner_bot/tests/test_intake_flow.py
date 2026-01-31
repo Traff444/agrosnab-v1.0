@@ -1,7 +1,8 @@
 """Tests for intake flow and service."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
 class TestIntakeSession:
@@ -34,54 +35,84 @@ class TestIntakeSession:
 class TestIntakeService:
     """Test cases for IntakeService."""
 
-    def test_create_session(self):
+    @pytest.mark.asyncio
+    async def test_create_session(self):
         """Test session creation."""
+        from app.models import IntakeSession
         from app.services.intake_service import IntakeService
 
+        mock_store = MagicMock()
+        mock_store.save = AsyncMock()
+
         service = IntakeService()
-        session = service.create_session(123456789)
+
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            session = await service.create_session(123456789)
 
         assert session is not None
         assert session.user_id == 123456789
+        mock_store.save.assert_called_once()
 
-    def test_get_session(self):
+    @pytest.mark.asyncio
+    async def test_get_session(self):
         """Test session retrieval."""
+        from app.models import IntakeSession
         from app.services.intake_service import IntakeService
 
-        service = IntakeService()
-        service.create_session(123456789)
+        expected_session = IntakeSession(user_id=123456789)
+        mock_store = MagicMock()
+        mock_store.get = AsyncMock(return_value=expected_session)
 
-        session = service.get_session(123456789)
+        service = IntakeService()
+
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            session = await service.get_session(123456789)
+
         assert session is not None
         assert session.user_id == 123456789
+        mock_store.get.assert_called_once_with(123456789)
 
-    def test_get_nonexistent_session(self):
+    @pytest.mark.asyncio
+    async def test_get_nonexistent_session(self):
         """Test retrieval of nonexistent session."""
         from app.services.intake_service import IntakeService
 
+        mock_store = MagicMock()
+        mock_store.get = AsyncMock(return_value=None)
+
         service = IntakeService()
-        session = service.get_session(999999)
+
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            session = await service.get_session(999999)
 
         assert session is None
 
-    def test_clear_session(self):
+    @pytest.mark.asyncio
+    async def test_clear_session(self):
         """Test session clearing."""
         from app.services.intake_service import IntakeService
 
+        mock_store = MagicMock()
+        mock_store.delete = AsyncMock(return_value=True)
+
         service = IntakeService()
-        service.create_session(123456789)
-        service.clear_session(123456789)
 
-        session = service.get_session(123456789)
-        assert session is None
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            await service.clear_session(123456789)
 
-    def test_update_session_from_parsed(self):
+        mock_store.delete.assert_called_once_with(123456789)
+
+    @pytest.mark.asyncio
+    async def test_update_session_from_parsed(self):
         """Test updating session from parsed intake."""
+        from app.models import IntakeConfidence, IntakeSession, ParsedIntake
         from app.services.intake_service import IntakeService
-        from app.models import ParsedIntake, IntakeConfidence
+
+        mock_store = MagicMock()
+        mock_store.save = AsyncMock()
 
         service = IntakeService()
-        session = service.create_session(123456789)
+        session = IntakeSession(user_id=123456789)
 
         parsed = ParsedIntake(
             name="Test Product",
@@ -91,48 +122,67 @@ class TestIntakeService:
             raw_input="Test Product 500 10",
         )
 
-        service.update_session_from_parsed(session, parsed)
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            await service.update_session_from_parsed(session, parsed)
 
         assert session.name == "Test Product"
         assert session.price == 500.0
         assert session.quantity == 10
+        mock_store.save.assert_called_once()
 
-    def test_set_existing_product(self, sample_product):
+    @pytest.mark.asyncio
+    async def test_set_existing_product(self, sample_product):
         """Test setting existing product in session."""
+        from app.models import IntakeSession
         from app.services.intake_service import IntakeService
 
-        service = IntakeService()
-        session = service.create_session(123456789)
+        mock_store = MagicMock()
+        mock_store.save = AsyncMock()
 
-        service.set_existing_product(session, sample_product)
+        service = IntakeService()
+        session = IntakeSession(user_id=123456789)
+
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            await service.set_existing_product(session, sample_product)
 
         assert session.existing_product == sample_product
         assert session.is_new_product is False
         assert session.sku == sample_product.sku
+        mock_store.save.assert_called_once()
 
-    def test_set_new_product(self, sample_product):
+    @pytest.mark.asyncio
+    async def test_set_new_product(self, sample_product):
         """Test setting session for new product."""
+        from app.models import IntakeSession
         from app.services.intake_service import IntakeService
 
+        mock_store = MagicMock()
+        mock_store.save = AsyncMock()
+
         service = IntakeService()
-        session = service.create_session(123456789)
+        session = IntakeSession(user_id=123456789)
 
-        # First set as existing
-        service.set_existing_product(session, sample_product)
+        # Set as existing first
+        session.existing_product = sample_product
+        session.is_new_product = False
+        session.sku = sample_product.sku
 
-        # Then switch to new
-        service.set_new_product(session)
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            await service.set_new_product(session)
 
         assert session.existing_product is None
         assert session.is_new_product is True
         assert session.sku is None
+        mock_store.save.assert_called_once()
 
-    def test_format_session_preview_new_product(self):
+    @pytest.mark.asyncio
+    async def test_format_session_preview_new_product(self):
         """Test preview formatting for new product."""
+        from app.models import IntakeSession
         from app.services.intake_service import IntakeService
 
         service = IntakeService()
-        session = service.create_session(123456789)
+        session = IntakeSession(user_id=123456789)
         session.name = "New Product"
         session.price = 1000.0
         session.quantity = 5
@@ -145,14 +195,21 @@ class TestIntakeService:
         assert "1000" in preview
         assert "+5" in preview
 
-    def test_format_session_preview_existing_product(self, sample_product):
+    @pytest.mark.asyncio
+    async def test_format_session_preview_existing_product(self, sample_product):
         """Test preview formatting for existing product."""
+        from app.models import IntakeSession
         from app.services.intake_service import IntakeService
 
+        mock_store = MagicMock()
+        mock_store.save = AsyncMock()
+
         service = IntakeService()
-        session = service.create_session(123456789)
+        session = IntakeSession(user_id=123456789)
         session.quantity = 5
-        service.set_existing_product(session, sample_product)
+
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            await service.set_existing_product(session, sample_product)
 
         preview = service.format_session_preview(session)
 
@@ -169,8 +226,8 @@ class TestIntakeServiceCompleteIntake:
     @pytest.mark.asyncio
     async def test_complete_new_product(self, mock_sheets_client, mock_settings):
         """Test completing intake for new product."""
+        from app.models import IntakeSession, Product
         from app.services.intake_service import IntakeService
-        from app.models import Product
 
         # Setup mock
         mock_sheets_client.create_product = AsyncMock(return_value=Product(
@@ -183,7 +240,7 @@ class TestIntakeServiceCompleteIntake:
         ))
 
         service = IntakeService()
-        session = service.create_session(123456789)
+        session = IntakeSession(user_id=123456789)
         session.name = "New Test"
         session.price = 1000.0
         session.quantity = 5
@@ -199,8 +256,11 @@ class TestIntakeServiceCompleteIntake:
     @pytest.mark.asyncio
     async def test_complete_existing_product(self, mock_sheets_client, mock_settings, sample_product):
         """Test completing intake for existing product."""
+        from app.models import IntakeSession, Product
         from app.services.intake_service import IntakeService
-        from app.models import Product
+
+        mock_store = MagicMock()
+        mock_store.save = AsyncMock()
 
         # Setup mock
         updated_product = Product(
@@ -214,9 +274,11 @@ class TestIntakeServiceCompleteIntake:
         mock_sheets_client.update_product_stock = AsyncMock(return_value=updated_product)
 
         service = IntakeService()
-        session = service.create_session(123456789)
+        session = IntakeSession(user_id=123456789)
         session.quantity = 5
-        service.set_existing_product(session, sample_product)
+
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            await service.set_existing_product(session, sample_product)
 
         with patch("app.services.intake_service.sheets_client", mock_sheets_client):
             result = await service.complete_intake(session)
@@ -228,10 +290,11 @@ class TestIntakeServiceCompleteIntake:
     @pytest.mark.asyncio
     async def test_complete_missing_required_fields(self, mock_settings):
         """Test completing intake with missing fields fails."""
+        from app.models import IntakeSession
         from app.services.intake_service import IntakeService
 
         service = IntakeService()
-        session = service.create_session(123456789)
+        session = IntakeSession(user_id=123456789)
         session.is_new_product = True
         # Missing name, price, quantity
 

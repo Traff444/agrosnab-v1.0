@@ -17,6 +17,7 @@ from app.models import (
 from app.photo_enhance import enhance_photo
 from app.photo_quality import analyze_photo
 from app.sheets import sheets_client
+from app.storage import intake_session_store
 
 logger = logging.getLogger(__name__)
 
@@ -34,67 +35,73 @@ class IntakeResult:
 
 
 class IntakeService:
-    """Service for managing intake sessions."""
+    """Service for managing intake sessions.
 
-    def __init__(self):
-        self._sessions: dict[int, IntakeSession] = {}
+    Sessions are persisted in SQLite to survive bot restarts.
+    """
 
-    def get_session(self, user_id: int) -> IntakeSession | None:
-        """Get active session for user."""
-        return self._sessions.get(user_id)
+    async def get_session(self, user_id: int) -> IntakeSession | None:
+        """Get active session for user from SQLite."""
+        return await intake_session_store.get(user_id)
 
-    def create_session(self, user_id: int) -> IntakeSession:
-        """Create new intake session."""
+    async def create_session(self, user_id: int) -> IntakeSession:
+        """Create new intake session and save to SQLite."""
         session = IntakeSession(user_id=user_id)
-        self._sessions[user_id] = session
+        await intake_session_store.save(session)
         return session
 
-    def clear_session(self, user_id: int) -> None:
-        """Clear user's intake session."""
-        if user_id in self._sessions:
-            del self._sessions[user_id]
+    async def save_session(self, session: IntakeSession) -> None:
+        """Save session state to SQLite."""
+        await intake_session_store.save(session)
+
+    async def clear_session(self, user_id: int) -> None:
+        """Clear user's intake session from SQLite."""
+        await intake_session_store.delete(user_id)
 
     def parse_quick_string(self, text: str) -> ParsedIntake:
         """Parse quick intake string."""
         return parse_intake_string(text)
 
-    def update_session_from_parsed(
+    async def update_session_from_parsed(
         self,
         session: IntakeSession,
         parsed: ParsedIntake,
     ) -> IntakeSession:
-        """Update session with parsed data."""
+        """Update session with parsed data and save to SQLite."""
         if parsed.name:
             session.name = parsed.name
         if parsed.price is not None:
             session.price = parsed.price
         if parsed.quantity is not None:
             session.quantity = parsed.quantity
+        await intake_session_store.save(session)
         return session
 
     async def find_matching_products(self, name: str) -> list[Product]:
         """Find products matching the name."""
         return await sheets_client.search_products(name, limit=5)
 
-    def set_existing_product(
+    async def set_existing_product(
         self,
         session: IntakeSession,
         product: Product,
     ) -> IntakeSession:
-        """Set session to update existing product."""
+        """Set session to update existing product and save to SQLite."""
         session.existing_product = product
         session.is_new_product = False
         session.sku = product.sku
         # Keep session price/quantity, use product name
         if not session.name:
             session.name = product.name
+        await intake_session_store.save(session)
         return session
 
-    def set_new_product(self, session: IntakeSession) -> IntakeSession:
-        """Set session to create new product."""
+    async def set_new_product(self, session: IntakeSession) -> IntakeSession:
+        """Set session to create new product and save to SQLite."""
         session.existing_product = None
         session.is_new_product = True
         session.sku = None
+        await intake_session_store.save(session)
         return session
 
     async def download_and_analyze_photo(
@@ -102,9 +109,10 @@ class IntakeService:
         session: IntakeSession,
         file_path: str,
     ) -> PhotoQualityResult:
-        """Analyze downloaded photo."""
+        """Analyze downloaded photo and save session."""
         result = analyze_photo(file_path)
         session.photo_quality = result
+        await intake_session_store.save(session)
         return result
 
     async def enhance_photo(self, file_path: str) -> str:
@@ -117,7 +125,7 @@ class IntakeService:
         session: IntakeSession,
         file_path: str,
     ) -> DriveUploadResult:
-        """Upload photo to Cloudinary."""
+        """Upload photo to Cloudinary and save session."""
         # Generate filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         sku_part = session.sku or "new"
@@ -127,6 +135,7 @@ class IntakeService:
 
         session.drive_file_id = result.file_id
         session.drive_url = result.public_url
+        await intake_session_store.save(session)
 
         return result
 

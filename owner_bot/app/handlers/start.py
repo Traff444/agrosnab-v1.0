@@ -20,7 +20,7 @@ async def handle_cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
 
     if message.from_user:
-        intake_service.clear_session(message.from_user.id)
+        await intake_service.clear_session(message.from_user.id)
 
     await message.answer(
         "🏠 Действие отменено. Возврат в главное меню.",

@@ -40,8 +40,8 @@ async def handle_product_intake(callback: CallbackQuery, state: FSMContext) -> N
 
     # Create session with product pre-selected
     if callback.from_user:
-        session = intake_service.create_session(callback.from_user.id)
-        intake_service.set_existing_product(session, product)
+        session = await intake_service.create_session(callback.from_user.id)
+        await intake_service.set_existing_product(session, product)
 
         await state.set_state(IntakeState.waiting_for_quantity)
         await callback.message.answer(
@@ -72,9 +72,10 @@ async def handle_product_photo(callback: CallbackQuery, state: FSMContext) -> No
     from app.services.intake_service import intake_service
 
     if callback.from_user:
-        session = intake_service.create_session(callback.from_user.id)
-        intake_service.set_existing_product(session, product)
+        session = await intake_service.create_session(callback.from_user.id)
+        await intake_service.set_existing_product(session, product)
         session.quantity = 0  # No stock change
+        await intake_service.save_session(session)
 
         await state.set_state(IntakeState.waiting_for_photo)
         await callback.message.answer(

@@ -53,7 +53,7 @@ async def start_intake(message: Message, state: FSMContext) -> None:
         return
 
     # Create new session
-    intake_service.create_session(message.from_user.id)
+    await intake_service.create_session(message.from_user.id)
 
     await state.set_state(IntakeState.waiting_for_input)
     await message.answer(
@@ -72,12 +72,12 @@ async def process_input(message: Message, state: FSMContext) -> None:
     if not message.from_user or not message.text:
         return
 
-    session = intake_service.get_session(message.from_user.id)
+    session = await intake_service.get_session(message.from_user.id)
     if not session:
-        session = intake_service.create_session(message.from_user.id)
+        session = await intake_service.create_session(message.from_user.id)
 
     parsed = intake_service.parse_quick_string(message.text)
-    intake_service.update_session_from_parsed(session, parsed)
+    await intake_service.update_session_from_parsed(session, parsed)
 
     # Show what was parsed
     await message.answer(format_parsed_intake(parsed))
@@ -106,12 +106,13 @@ async def process_name(message: Message, state: FSMContext) -> None:
     if not message.from_user or not message.text:
         return
 
-    session = intake_service.get_session(message.from_user.id)
+    session = await intake_service.get_session(message.from_user.id)
     if not session:
         await _restart_intake(message, state)
         return
 
     session.name = message.text.strip()
+    await intake_service.save_session(session)
 
     if session.price is None:
         await state.set_state(IntakeState.waiting_for_price)
@@ -129,7 +130,7 @@ async def process_price(message: Message, state: FSMContext) -> None:
     if not message.from_user or not message.text:
         return
 
-    session = intake_service.get_session(message.from_user.id)
+    session = await intake_service.get_session(message.from_user.id)
     if not session:
         await _restart_intake(message, state)
         return
@@ -139,6 +140,7 @@ async def process_price(message: Message, state: FSMContext) -> None:
         if price <= 0:
             raise ValueError("Price must be positive")
         session.price = price
+        await intake_service.save_session(session)
     except ValueError:
         await message.answer("❌ Неверный формат цены. Введите число:")
         return
@@ -156,7 +158,7 @@ async def process_quantity(message: Message, state: FSMContext) -> None:
     if not message.from_user or not message.text:
         return
 
-    session = intake_service.get_session(message.from_user.id)
+    session = await intake_service.get_session(message.from_user.id)
     if not session:
         await _restart_intake(message, state)
         return
@@ -166,6 +168,7 @@ async def process_quantity(message: Message, state: FSMContext) -> None:
         if qty <= 0:
             raise ValueError("Quantity must be positive")
         session.quantity = qty
+        await intake_service.save_session(session)
     except ValueError:
         await message.answer("❌ Неверный формат количества. Введите целое число:")
         return
@@ -191,7 +194,7 @@ async def _check_matching_products(message: Message, state: FSMContext, session)
         )
     else:
         # No matches - create new product
-        intake_service.set_new_product(session)
+        await intake_service.set_new_product(session)
         await _ask_photo_decision(message, state, session)
 
 
@@ -203,7 +206,7 @@ async def process_match_decision(callback: CallbackQuery, state: FSMContext) -> 
 
     logger.info("process_match_decision: user=%s, data=%s", callback.from_user.id, callback.data)
 
-    session = intake_service.get_session(callback.from_user.id)
+    session = await intake_service.get_session(callback.from_user.id)
     if not session:
         await callback.answer("Сессия истекла", show_alert=True)
         await state.clear()
@@ -213,7 +216,7 @@ async def process_match_decision(callback: CallbackQuery, state: FSMContext) -> 
 
     if callback.data == "match_new":
         logger.info("process_match_decision: creating NEW product")
-        intake_service.set_new_product(session)
+        await intake_service.set_new_product(session)
         await _ask_photo_decision(callback.message, state, session)
     else:
         # Selected existing product
@@ -226,7 +229,7 @@ async def process_match_decision(callback: CallbackQuery, state: FSMContext) -> 
             await callback.message.answer("❌ Товар не найден")
             return
 
-        intake_service.set_existing_product(session, product)
+        await intake_service.set_existing_product(session, product)
         logger.info("process_match_decision: set existing_product SKU=%s", product.sku)
         await _ask_photo_decision(callback.message, state, session)
 
@@ -256,7 +259,7 @@ async def process_photo_decision(callback: CallbackQuery, state: FSMContext) -> 
     if not callback.from_user or not callback.data:
         return
 
-    session = intake_service.get_session(callback.from_user.id)
+    session = await intake_service.get_session(callback.from_user.id)
     if not session:
         await callback.answer("Сессия истекла", show_alert=True)
         await state.clear()
@@ -282,7 +285,7 @@ async def process_photo(message: Message, state: FSMContext, bot: Bot) -> None:
     if not message.from_user or not message.photo:
         return
 
-    session = intake_service.get_session(message.from_user.id)
+    session = await intake_service.get_session(message.from_user.id)
     if not session:
         await _restart_intake(message, state)
         return
@@ -292,6 +295,7 @@ async def process_photo(message: Message, state: FSMContext, bot: Bot) -> None:
     # Get largest photo
     photo = message.photo[-1]
     session.photo_file_id = photo.file_id
+    await intake_service.save_session(session)
 
     # Download photo to tmp
     tmp_dir = Path(settings.tmp_dir)
@@ -319,7 +323,7 @@ async def process_photo_review(callback: CallbackQuery, state: FSMContext) -> No
     if not callback.from_user or not callback.data:
         return
 
-    session = intake_service.get_session(callback.from_user.id)
+    session = await intake_service.get_session(callback.from_user.id)
     if not session:
         await callback.answer("Сессия истекла", show_alert=True)
         await state.clear()
@@ -368,6 +372,7 @@ async def process_photo_review(callback: CallbackQuery, state: FSMContext) -> No
                 os.unlink(tmp_path)
         session.photo_file_id = None
         session.photo_quality = None
+        await intake_service.save_session(session)
         await state.set_state(IntakeState.waiting_for_photo)
         await callback.message.answer(
             "📷 Отправьте новое фото товара:",
@@ -409,7 +414,7 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
 
     logger.info("process_preview_confirm: user=%s, data=%s", callback.from_user.id, callback.data)
 
-    session = intake_service.get_session(callback.from_user.id)
+    session = await intake_service.get_session(callback.from_user.id)
     if not session:
         logger.warning("process_preview_confirm: session not found!")
         await callback.answer("Сессия истекла", show_alert=True)
@@ -445,7 +450,7 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
             )
 
             # Clean up session
-            intake_service.clear_session(callback.from_user.id)
+            await intake_service.clear_session(callback.from_user.id)
             await state.clear()
         else:
             # Error - offer retry
@@ -467,7 +472,7 @@ async def process_retry(callback: CallbackQuery, state: FSMContext) -> None:
     if not callback.from_user:
         return
 
-    session = intake_service.get_session(callback.from_user.id)
+    session = await intake_service.get_session(callback.from_user.id)
     if not session:
         await callback.answer("Сессия истекла", show_alert=True)
         await state.clear()
@@ -487,7 +492,7 @@ async def process_retry(callback: CallbackQuery, state: FSMContext) -> None:
             reply_markup=main_menu_keyboard(),
         )
 
-        intake_service.clear_session(callback.from_user.id)
+        await intake_service.clear_session(callback.from_user.id)
         await state.clear()
     else:
         await callback.message.answer(
@@ -505,7 +510,7 @@ async def process_cancel_callback(callback: CallbackQuery, state: FSMContext) ->
 async def _cancel_intake(callback: CallbackQuery, state: FSMContext) -> None:
     """Cancel intake and return to menu."""
     if callback.from_user:
-        intake_service.clear_session(callback.from_user.id)
+        await intake_service.clear_session(callback.from_user.id)
 
     await state.clear()
     await callback.message.answer(
