@@ -26,12 +26,12 @@ def event_loop():
 
 
 @pytest.mark.asyncio
-async def test_init_db(monkeypatch, tmp_path):
+async def test_init_db(isolate_test_database):
     """Test database initialization."""
     from app import cart_store
 
-    db_path = str(tmp_path / "test_init.sqlite3")
-    monkeypatch.setattr(cart_store, "DB_PATH", db_path)
+    # Use the isolated test database from the fixture
+    db_path = isolate_test_database
 
     await cart_store.init_db()
 
@@ -210,13 +210,12 @@ async def test_chat_history(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_chat_history_limit(monkeypatch, tmp_path):
+async def test_chat_history_limit(monkeypatch, isolate_test_database):
     """Test chat history respects max limit."""
     from app import cart_store
 
-    db_path = str(tmp_path / "test_chat_limit.sqlite3")
-    monkeypatch.setattr(cart_store, "DB_PATH", db_path)
-    monkeypatch.setattr(cart_store, "MAX_HISTORY_MESSAGES", 5)
+    # Patch MAX_HISTORY_MESSAGES in the actual module where it's used
+    monkeypatch.setattr("app.storage.chat_history.MAX_HISTORY_MESSAGES", 5)
     await cart_store.init_db()
 
     user_id = 123
