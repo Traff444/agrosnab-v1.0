@@ -20,10 +20,7 @@ OPENAI_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 
 # Use the same database path as Shop Bot
 _DATA_DIR = Path(__file__).parent.parent.parent / "data"
-if os.path.exists("/app/data"):
-    DB_PATH = "/app/data/bot.sqlite3"
-else:
-    DB_PATH = str(_DATA_DIR / "bot.sqlite3")
+DB_PATH = "/app/data/bot.sqlite3" if os.path.exists("/app/data") else str(_DATA_DIR / "bot.sqlite3")
 
 
 async def get_user_messages(
@@ -69,7 +66,7 @@ async def get_user_messages(
             rows = await cur.fetchall()
             return [dict(row) for row in rows]
     except Exception as e:
-        logger.error(f"Failed to get user messages: {e}")
+        logger.error("user_messages_fetch_failed", extra={"user_id": user_id, "error": str(e)})
         return []
 
 
@@ -84,7 +81,7 @@ async def get_user_messages_count(user_id: int) -> int:
             row = await cur.fetchone()
             return row[0] if row else 0
     except Exception as e:
-        logger.error(f"Failed to count messages: {e}")
+        logger.error("messages_count_failed", extra={"user_id": user_id, "error": str(e)})
         return 0
 
 
@@ -132,7 +129,7 @@ async def get_user_events(
             rows = await cur.fetchall()
             return [dict(row) for row in rows]
     except Exception as e:
-        logger.error(f"Failed to get user events: {e}")
+        logger.error("user_events_fetch_failed", extra={"user_id": user_id, "error": str(e)})
         return []
 
 
@@ -227,5 +224,5 @@ async def generate_ai_summary(
         return response.choices[0].message.content or "Не удалось сгенерировать сводку."
 
     except Exception as e:
-        logger.error(f"Failed to generate AI summary: {e}")
+        logger.error("ai_summary_failed", extra={"user_id": user_id, "error": str(e)})
         return f"Ошибка AI: {str(e)}"

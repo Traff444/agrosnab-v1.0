@@ -57,7 +57,7 @@ async def global_error_handler(event: ErrorEvent) -> bool:
                 "Произошла ошибка. Попробуйте ещё раз.", show_alert=True
             )
     except Exception as e:
-        logger.error(f"Failed to notify user about error: {e}")
+        logger.error("error_notification_failed", extra={"error": str(e)})
 
     return True  # Error was handled
 
@@ -68,7 +68,7 @@ async def main():
 
     # Load config
     cfg = Settings()
-    logger.info(f"Loaded config: sheet_id={cfg.sheet_id()[:10]}...")
+    logger.info("config_loaded", extra={"sheet_id_prefix": cfg.sheet_id()[:10]})
 
     # Initialize bot and dispatcher
     bot = Bot(token=cfg.telegram_bot_token)

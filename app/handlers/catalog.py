@@ -43,7 +43,7 @@ def register_catalog_handlers(
         try:
             await sheets_client.upsert_lead(user_id, stage='engaged')
         except Exception as e:
-            logger.warning(f"Failed to update lead {user_id}: {e}")
+            logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
         products = product_service.get_available_products()
         if not products:
@@ -98,7 +98,7 @@ def register_catalog_handlers(
         try:
             await sheets_client.upsert_lead(user_id, stage='engaged')
         except Exception as e:
-            logger.warning(f"Failed to update lead {user_id}: {e}")
+            logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
         products = product_service.filter_by_category(category)
         total_items = len(products)
@@ -201,6 +201,16 @@ def register_catalog_handlers(
     async def search_query(m: Message, state: FSMContext):
         user_id = m.from_user.id
         query = (m.text or "").strip().lower()
+
+        # Валидация длины запроса
+        if not query or len(query) > 200:
+            await m.answer(
+                "⚠️ Запрос должен быть от 1 до 200 символов.",
+                reply_markup=back_to_menu_kb(),
+            )
+            await state.clear()
+            return
+
         await state.clear()
 
         found = product_service.search(query)
@@ -215,7 +225,7 @@ def register_catalog_handlers(
         try:
             await sheets_client.upsert_lead(user_id, stage='engaged')
         except Exception as e:
-            logger.warning(f"Failed to update lead {user_id}: {e}")
+            logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
         from ..utils import escape_html
 
@@ -252,7 +262,7 @@ def register_catalog_handlers(
         try:
             await sheets_client.upsert_lead(user_id, stage='engaged')
         except Exception as e:
-            logger.warning(f"Failed to update lead {user_id}: {e}")
+            logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
         text = format_product(product, compact=False)
 

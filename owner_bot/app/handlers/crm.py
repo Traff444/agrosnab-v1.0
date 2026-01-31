@@ -240,7 +240,7 @@ async def crm_funnel(cb: CallbackQuery) -> None:
         stats = await sheets_client.get_funnel_stats()
         text = format_funnel(stats)
     except Exception as e:
-        logger.error(f"Failed to get funnel stats: {e}")
+        logger.error("funnel_stats_failed", extra={"error": str(e)})
         text = "❌ Не удалось загрузить статистику воронки"
 
     kb = InlineKeyboardMarkup(
@@ -273,7 +273,7 @@ async def crm_leads(cb: CallbackQuery) -> None:
     try:
         leads = await sheets_client.get_leads(limit=10)
     except Exception as e:
-        logger.error(f"Failed to get leads: {e}")
+        logger.error("leads_fetch_failed", extra={"error": str(e)})
         leads = []
 
     if not leads:
@@ -478,7 +478,7 @@ async def crm_search_query(message: Message, state: FSMContext) -> None:
     try:
         results = await sheets_client.search_leads(query)
     except Exception as e:
-        logger.error(f"Search failed: {e}")
+        logger.error("search_failed", extra={"error": str(e)})
         results = []
 
     if not results:
@@ -573,7 +573,7 @@ async def crm_add_note_save(message: Message, state: FSMContext) -> None:
             ),
         )
     except Exception as e:
-        logger.error(f"Failed to save note: {e}")
+        logger.error("note_save_failed", extra={"error": str(e)})
         await message.answer("❌ Не удалось сохранить заметку")
 
 
@@ -629,7 +629,7 @@ async def crm_toggle_tag(cb: CallbackQuery) -> None:
     try:
         await sheets_client.update_lead_tags(user_id, new_tags_str)
     except Exception as e:
-        logger.error(f"Failed to update tags: {e}")
+        logger.error("tags_update_failed", extra={"error": str(e)})
         await cb.answer("Ошибка сохранения", show_alert=True)
         return
 
@@ -647,7 +647,7 @@ async def crm_daily_report(cb: CallbackQuery) -> None:
         stats = await sheets_client.get_funnel_stats()
         orders = await sheets_client.get_orders_summary()
     except Exception as e:
-        logger.error(f"Failed to get report: {e}")
+        logger.error("report_fetch_failed", extra={"error": str(e)})
         await _safe_edit_text(
             cb,
             "❌ Не удалось загрузить отчёт",

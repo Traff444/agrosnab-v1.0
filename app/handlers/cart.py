@@ -160,7 +160,7 @@ def register_cart_handlers(
                     last_order_id=order_id,
                 )
             except Exception as crm_error:
-                logger.warning(f"Failed to update lead {user_id}: {crm_error}")
+                logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(crm_error)})
 
         except Exception as e:
             logger.error("Checkout failed for user %s: %s", user_id, e)
@@ -221,7 +221,7 @@ def register_cart_handlers(
             try:
                 await sheets_client.upsert_lead(user_id, stage='cart')
             except Exception as e:
-                logger.warning(f"Failed to update lead {user_id}: {e}")
+                logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
         await cb.answer(message, show_alert=True)
 

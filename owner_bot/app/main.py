@@ -12,8 +12,8 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.config import get_settings
-from app.security import WhitelistMiddleware
 from app.handlers import get_main_router
+from app.security import WhitelistMiddleware
 from app.sheets import sheets_client
 
 
@@ -46,17 +46,30 @@ async def on_startup(bot: Bot) -> None:
     # Load column mapping from Sheets
     try:
         col_map = await sheets_client.load_column_map()
-        logger.info(f"Loaded column map with {len(col_map)} columns")
+        logger.info(
+            "column_map_loaded",
+            extra={"columns_count": len(col_map)},
+        )
     except Exception as e:
-        logger.error(f"Failed to load column map: {e}")
+        logger.error(
+            "column_map_load_failed",
+            extra={"error": str(e)},
+            exc_info=True,
+        )
         logger.warning("Bot will start but Sheets operations may fail")
 
     # Get bot info
     me = await bot.get_me()
-    logger.info(f"Bot started: @{me.username} ({me.id})")
+    logger.info(
+        "bot_started",
+        extra={"username": me.username, "bot_id": me.id},
+    )
 
     settings = get_settings()
-    logger.info(f"Authorized owners: {settings.owner_telegram_ids}")
+    logger.info(
+        "owners_configured",
+        extra={"owner_ids": settings.owner_telegram_ids},
+    )
 
 
 async def on_shutdown(bot: Bot) -> None:

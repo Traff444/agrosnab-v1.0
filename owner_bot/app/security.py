@@ -1,12 +1,13 @@
 """Security middleware and confirmation actions."""
 
 import secrets
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
-from typing import Any, Callable, Awaitable
+from typing import Any
 
 import aiosqlite
 from aiogram import BaseMiddleware
-from aiogram.types import Message, CallbackQuery, TelegramObject
+from aiogram.types import CallbackQuery, Message, TelegramObject
 
 from app.config import get_settings
 
@@ -25,9 +26,7 @@ class WhitelistMiddleware(BaseMiddleware):
 
         user_id: int | None = None
 
-        if isinstance(event, Message) and event.from_user:
-            user_id = event.from_user.id
-        elif isinstance(event, CallbackQuery) and event.from_user:
+        if isinstance(event, Message) and event.from_user or isinstance(event, CallbackQuery) and event.from_user:
             user_id = event.from_user.id
 
         if user_id is None:
@@ -115,6 +114,9 @@ class ConfirmActionStore:
     async def get(self, action_id: str) -> dict[str, Any] | None:
         """Get a confirmation action by ID if not expired."""
         import json
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         await self._ensure_initialized()
 
@@ -134,10 +136,20 @@ class ConfirmActionStore:
                 await self.delete(action_id)
                 return None
 
+            try:
+                payload = json.loads(row["payload"])
+            except json.JSONDecodeError as e:
+                logger.error(
+                    "Corrupted payload in confirm_actions",
+                    extra={"action_id": action_id, "error": str(e)},
+                )
+                await self.delete(action_id)
+                return None
+
             return {
                 "id": row["id"],
                 "action_type": row["action_type"],
-                "payload": json.loads(row["payload"]),
+                "payload": payload,
                 "owner_id": row["owner_id"],
                 "expires_at": expires_at,
                 "created_at": datetime.fromisoformat(row["created_at"]),

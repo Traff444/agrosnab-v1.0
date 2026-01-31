@@ -3,7 +3,7 @@
 import re
 from typing import NamedTuple
 
-from app.models import ParsedIntake, IntakeConfidence
+from app.models import IntakeConfidence, ParsedIntake
 
 
 class TokenPattern(NamedTuple):

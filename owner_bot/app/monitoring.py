@@ -30,7 +30,7 @@ async def alert_owner(bot: Bot, message: str) -> None:
         try:
             await bot.send_message(owner_id, f"🚨 {message}")
         except Exception as e:
-            logger.warning(f"Failed to send alert to {owner_id}: {e}")
+            logger.warning("alert_send_failed", extra={"owner_id": owner_id, "error": str(e)})
 
 
 def capture_exception(error: Exception, context: dict | None = None) -> None:
@@ -42,7 +42,7 @@ def capture_exception(error: Exception, context: dict | None = None) -> None:
                 for key, value in context.items():
                     scope.set_extra(key, value)
             sentry_sdk.capture_exception(error)
-    logger.error(f"Error captured: {error}", exc_info=error)
+    logger.error("error_captured", extra={"error_type": type(error).__name__, "error": str(error)}, exc_info=error)
 
 
 # Transient errors worth retrying (network issues, rate limits, server errors)

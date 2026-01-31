@@ -7,7 +7,6 @@ from PIL import Image, ImageFilter, ImageStat
 from app.config import get_settings
 from app.models import PhotoQualityResult, PhotoStatus
 
-
 PREVIEW_SIZE = 512
 
 

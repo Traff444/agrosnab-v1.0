@@ -137,7 +137,7 @@ def register_ai_handlers(
                     message_type='text',
                 )
         except Exception as e:
-            logger.warning(f"Failed to log CRM message: {e}")
+            logger.warning("crm_message_log_failed", extra={"error": str(e)})
 
         out = await run_ai(
             api_key=cfg.openai_api_key,
@@ -164,7 +164,7 @@ def register_ai_handlers(
                         message_type='ai_response',
                     )
             except Exception as e:
-                logger.warning(f"Failed to log CRM outgoing message: {e}")
+                logger.warning("crm_outgoing_log_failed", extra={"error": str(e)})
 
         # Show quick actions after AI response
         await m.answer("👇 Быстрые действия:", reply_markup=cart_kb())

@@ -48,7 +48,7 @@ def register_start_handlers(
                 consent_at=datetime.now(),
             )
         except Exception as e:
-            logger.warning(f"Failed to upsert lead {user_id}: {e}")
+            logger.warning("lead_upsert_failed", extra={"user_id": user_id, "error": str(e)})
 
         # Show persistent menu at bottom with consent text
         await m.answer(

@@ -1,11 +1,9 @@
 """Product management service."""
 
 from dataclasses import dataclass
-from typing import Any
 
 from app.models import Product
 from app.sheets import sheets_client
-from app.drive import drive_client
 
 
 @dataclass

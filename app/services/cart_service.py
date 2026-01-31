@@ -102,7 +102,7 @@ class CartService:
         product = self._products.get_product(sku)
 
         if not product:
-            logger.warning(f"Attempt to add non-existent SKU: {sku}")
+            logger.warning("add_nonexistent_sku", extra={"sku": sku})
             return False, f"Товар с артикулом {sku} не найден"
 
         if product["stock"] <= 0:

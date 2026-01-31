@@ -36,10 +36,10 @@ class Settings(BaseSettings):
     cloudinary_api_secret: str = ""
 
     # Photo quality thresholds
-    photo_min_size: int = 800
-    photo_sharpness_threshold: float = 100.0
-    photo_brightness_min: int = 40
-    photo_brightness_max: int = 220
+    photo_min_size: int = 800  # Минимальная ширина/высота в пикселях
+    photo_sharpness_threshold: float = 100.0  # Laplacian variance threshold
+    photo_brightness_min: int = 40  # Шкала 0-255 (избежать слишком тёмных)
+    photo_brightness_max: int = 220  # Шкала 0-255 (избежать пересвета)
 
     # OpenAI (for AI summaries)
     openai_api_key: str | None = None
@@ -78,6 +78,39 @@ class Settings(BaseSettings):
                 "GOOGLE_SERVICE_ACCOUNT_JSON_B64 must be provided"
             )
         return self
+
+    @model_validator(mode="after")
+    def validate_cloudinary_credentials(self) -> "Settings":
+        """Ensure all Cloudinary credentials are provided together or none."""
+        cloudinary_fields = [
+            self.cloudinary_cloud_name,
+            self.cloudinary_api_key,
+            self.cloudinary_api_secret,
+        ]
+        filled = [bool(f) for f in cloudinary_fields]
+
+        if any(filled) and not all(filled):
+            missing = []
+            if not self.cloudinary_cloud_name:
+                missing.append("CLOUDINARY_CLOUD_NAME")
+            if not self.cloudinary_api_key:
+                missing.append("CLOUDINARY_API_KEY")
+            if not self.cloudinary_api_secret:
+                missing.append("CLOUDINARY_API_SECRET")
+            raise ValueError(
+                f"Cloudinary partially configured. Missing: {', '.join(missing)}. "
+                "Provide all Cloudinary credentials or none."
+            )
+        return self
+
+    @property
+    def cloudinary_enabled(self) -> bool:
+        """Check if Cloudinary is fully configured."""
+        return bool(
+            self.cloudinary_cloud_name
+            and self.cloudinary_api_key
+            and self.cloudinary_api_secret
+        )
 
     def get_google_credentials_info(self) -> dict:
         """Get Google service account credentials as dictionary."""

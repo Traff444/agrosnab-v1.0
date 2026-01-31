@@ -13,7 +13,6 @@ from app.keyboards import main_menu_keyboard
 from app.photo_enhance import cleanup_tmp_files
 from app.services.intake_service import intake_service
 
-
 router = Router()
 
 

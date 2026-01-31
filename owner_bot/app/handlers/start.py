@@ -4,13 +4,12 @@ Note: /start command is handled in critical.py with highest priority.
 This module only handles the reply keyboard button "❌ Отмена".
 """
 
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.keyboards import main_menu_keyboard
 from app.services.intake_service import intake_service
-
 
 router = Router()
 

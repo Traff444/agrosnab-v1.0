@@ -1,14 +1,13 @@
 """Orders summary handlers."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.types import Message
 
 from app.config import get_settings
 from app.keyboards import main_menu_keyboard
-
 
 router = Router()
 
