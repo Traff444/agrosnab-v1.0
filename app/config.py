@@ -36,3 +36,7 @@ class Settings(BaseSettings):
 
     def cdek_enabled(self) -> bool:
         return bool(self.cdek_client_id and self.cdek_client_secret)
+
+
+# Catalog settings
+CATALOG_PAGE_SIZE = 8

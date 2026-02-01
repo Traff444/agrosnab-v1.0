@@ -10,8 +10,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .. import cart_store
+from ..config import CATALOG_PAGE_SIZE
 from ..keyboards import (
-    CATALOG_PAGE_SIZE,
     back_to_menu_kb,
     catalog_grid_kb,
     categories_kb,
@@ -61,7 +61,7 @@ def register_catalog_handlers(
         cart_count = await cart_store.get_cart_count(user_id)
 
         # Show grid of products
-        total_pages = (len(products) + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE
+        total_pages = max(1, (len(products) + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE)
         text = f"🗂 <b>Каталог</b>\n\n📦 {len(products)} товаров • Страница 1/{total_pages}\n\nВыберите товар:"
         kb = catalog_grid_kb(products, page=0, category="all", cart_count=cart_count)
         await m.answer(text, parse_mode="HTML", reply_markup=kb)
@@ -103,7 +103,7 @@ def register_catalog_handlers(
             return
 
         # Calculate page bounds
-        total_pages = (total_items + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE
+        total_pages = max(1, (total_items + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE)
         page = max(0, min(page, total_pages - 1))
 
         # Get cart count for button label

@@ -12,6 +12,7 @@ from aiogram.types import ErrorEvent
 from . import cart_store
 from .config import Settings
 from .handlers import (
+    navigation_router,
     register_ai_handlers,
     register_cart_handlers,
     register_catalog_handlers,
@@ -102,6 +103,7 @@ async def main():
 
     # Register handlers
     # Order matters! More specific handlers should be registered first
+    dp.include_router(navigation_router)  # Navigation callbacks (pageinfo)
     register_start_handlers(dp, product_service, sheets)
     register_catalog_handlers(dp, product_service, sheets)
     register_cart_handlers(dp, product_service, cart_service, sheets)

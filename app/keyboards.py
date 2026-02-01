@@ -7,6 +7,9 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 
+from .config import CATALOG_PAGE_SIZE
+from .utils import format_product_button
+
 
 def persistent_menu() -> ReplyKeyboardMarkup:
     """Постоянное меню снизу экрана."""
@@ -90,9 +93,8 @@ def catalog_page_kb(
 
 
 # ---------------------------------------------------------------------------
-# Catalog grid (6 items per page)
+# Catalog grid (8 items per page, 1 column layout)
 # ---------------------------------------------------------------------------
-CATALOG_PAGE_SIZE = 6
 
 
 def catalog_grid_kb(
@@ -102,8 +104,8 @@ def catalog_grid_kb(
     cart_count: int = 0,
 ) -> InlineKeyboardMarkup:
     """
-    Grid layout: 2 columns x 3 rows of products with navigation.
-    Each product button shows truncated name and price.
+    Single column layout with formatted product buttons.
+    Each product button shows: 'badge Name — price ₽' or 'badge Name — нет в наличии'.
     """
     total = len(products)
     total_pages = max(1, (total + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE)
@@ -112,53 +114,44 @@ def catalog_grid_kb(
 
     rows: list[list[InlineKeyboardButton]] = []
 
-    # Product buttons: 2 per row
-    for i in range(0, len(items), 2):
-        row = []
-        for p in items[i : i + 2]:
-            name = p.get("name", "")
-            if len(name) > 14:
-                name = name[:13] + "…"
-            price = p.get("price_rub", 0)
-            row.append(
+    # Product buttons: 1 per row (single column layout)
+    for p in items:
+        button_text = format_product_button(p, max_total=48)
+        rows.append(
+            [
                 InlineKeyboardButton(
-                    text=f"{name} {price}₽",
+                    text=button_text,
                     callback_data=f"product:{p['sku']}",
                 )
-            )
-        rows.append(row)
+            ]
+        )
 
     # Navigation row
     nav_row = []
     if page > 0:
         nav_row.append(
-            InlineKeyboardButton(text="⬅️ Пред.", callback_data=f"catalog:{page - 1}:{category}")
+            InlineKeyboardButton(text="⬅️ Назад", callback_data=f"catalog:{page - 1}:{category}")
         )
     nav_row.append(
-        InlineKeyboardButton(text=f"📄 {page + 1}/{total_pages}", callback_data="noop")
+        InlineKeyboardButton(
+            text=f"📄 {page + 1}/{total_pages}",
+            callback_data=f"pageinfo:{page + 1}:{total_pages}",
+        )
     )
     if page < total_pages - 1:
         nav_row.append(
-            InlineKeyboardButton(text="След. ➡️", callback_data=f"catalog:{page + 1}:{category}")
+            InlineKeyboardButton(text="Вперёд ➡️", callback_data=f"catalog:{page + 1}:{category}")
         )
     rows.append(nav_row)
 
-    # Categories and search
-    rows.append(
-        [
-            InlineKeyboardButton(text="📋 Категории", callback_data="categories"),
-            InlineKeyboardButton(text="🔍 Поиск", callback_data="search:start"),
-        ]
-    )
+    # Service buttons: 1 per row (single column)
+    rows.append([InlineKeyboardButton(text="🗂 Категории", callback_data="categories")])
+    rows.append([InlineKeyboardButton(text="🔎 Поиск", callback_data="search:start")])
 
-    # Cart with counter and menu
+    # Cart with counter
     cart_label = f"🧺 Корзина ({cart_count})" if cart_count else "🧺 Корзина"
-    rows.append(
-        [
-            InlineKeyboardButton(text=cart_label, callback_data="cart:show"),
-            InlineKeyboardButton(text="🏠 Меню", callback_data="menu"),
-        ]
-    )
+    rows.append([InlineKeyboardButton(text=cart_label, callback_data="cart:show")])
+    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="menu")])
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
