@@ -250,3 +250,50 @@ async def test_multiple_users(monkeypatch, tmp_path):
 
     assert cart1 == [("PRD-001", 5)]
     assert cart2 == [("PRD-002", 3)]
+
+
+@pytest.mark.asyncio
+async def test_get_cart_count(monkeypatch, tmp_path):
+    """Test getting total quantity in cart."""
+    from app import cart_store
+
+    db_path = str(tmp_path / "test_cart_count.sqlite3")
+    monkeypatch.setattr(cart_store, "DB_PATH", db_path)
+    await cart_store.init_db()
+
+    user_id = 123
+
+    # Empty cart
+    count = await cart_store.get_cart_count(user_id)
+    assert count == 0
+
+    # Add items
+    await cart_store.add_to_cart(user_id, "PRD-001", 5)
+    await cart_store.add_to_cart(user_id, "PRD-002", 3)
+
+    count = await cart_store.get_cart_count(user_id)
+    assert count == 8  # 5 + 3
+
+
+@pytest.mark.asyncio
+async def test_get_cart_items_count(monkeypatch, tmp_path):
+    """Test getting number of unique items in cart."""
+    from app import cart_store
+
+    db_path = str(tmp_path / "test_cart_items_count.sqlite3")
+    monkeypatch.setattr(cart_store, "DB_PATH", db_path)
+    await cart_store.init_db()
+
+    user_id = 123
+
+    # Empty cart
+    count = await cart_store.get_cart_items_count(user_id)
+    assert count == 0
+
+    # Add items
+    await cart_store.add_to_cart(user_id, "PRD-001", 5)
+    await cart_store.add_to_cart(user_id, "PRD-002", 3)
+    await cart_store.add_to_cart(user_id, "PRD-001", 2)  # Add more of existing item
+
+    count = await cart_store.get_cart_items_count(user_id)
+    assert count == 2  # Only 2 unique SKUs

@@ -20,12 +20,13 @@ def persistent_menu() -> ReplyKeyboardMarkup:
     )
 
 
-def main_menu_kb() -> InlineKeyboardMarkup:
+def main_menu_kb(cart_count: int = 0) -> InlineKeyboardMarkup:
+    cart_label = f"🧺 Корзина ({cart_count})" if cart_count else "🧺 Корзина"
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(text="🗂 Каталог", callback_data="catalog:0:all"),
-                InlineKeyboardButton(text="🧺 Корзина", callback_data="cart:show"),
+                InlineKeyboardButton(text=cart_label, callback_data="cart:show"),
             ],
             [
                 InlineKeyboardButton(text="🔍 Поиск", callback_data="search:start"),
@@ -88,7 +89,82 @@ def catalog_page_kb(
     )
 
 
-def product_kb(sku: str) -> InlineKeyboardMarkup:
+# ---------------------------------------------------------------------------
+# Catalog grid (6 items per page)
+# ---------------------------------------------------------------------------
+CATALOG_PAGE_SIZE = 6
+
+
+def catalog_grid_kb(
+    products: list[dict],
+    page: int,
+    category: str = "all",
+    cart_count: int = 0,
+) -> InlineKeyboardMarkup:
+    """
+    Grid layout: 2 columns x 3 rows of products with navigation.
+    Each product button shows truncated name and price.
+    """
+    total = len(products)
+    total_pages = max(1, (total + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE)
+    start = page * CATALOG_PAGE_SIZE
+    items = products[start : start + CATALOG_PAGE_SIZE]
+
+    rows: list[list[InlineKeyboardButton]] = []
+
+    # Product buttons: 2 per row
+    for i in range(0, len(items), 2):
+        row = []
+        for p in items[i : i + 2]:
+            name = p.get("name", "")
+            if len(name) > 14:
+                name = name[:13] + "…"
+            price = p.get("price_rub", 0)
+            row.append(
+                InlineKeyboardButton(
+                    text=f"{name} {price}₽",
+                    callback_data=f"product:{p['sku']}",
+                )
+            )
+        rows.append(row)
+
+    # Navigation row
+    nav_row = []
+    if page > 0:
+        nav_row.append(
+            InlineKeyboardButton(text="⬅️ Пред.", callback_data=f"catalog:{page - 1}:{category}")
+        )
+    nav_row.append(
+        InlineKeyboardButton(text=f"📄 {page + 1}/{total_pages}", callback_data="noop")
+    )
+    if page < total_pages - 1:
+        nav_row.append(
+            InlineKeyboardButton(text="След. ➡️", callback_data=f"catalog:{page + 1}:{category}")
+        )
+    rows.append(nav_row)
+
+    # Categories and search
+    rows.append(
+        [
+            InlineKeyboardButton(text="📋 Категории", callback_data="categories"),
+            InlineKeyboardButton(text="🔍 Поиск", callback_data="search:start"),
+        ]
+    )
+
+    # Cart with counter and menu
+    cart_label = f"🧺 Корзина ({cart_count})" if cart_count else "🧺 Корзина"
+    rows.append(
+        [
+            InlineKeyboardButton(text=cart_label, callback_data="cart:show"),
+            InlineKeyboardButton(text="🏠 Меню", callback_data="menu"),
+        ]
+    )
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def product_kb(sku: str, cart_count: int = 0) -> InlineKeyboardMarkup:
+    cart_label = f"🧺 Корзина ({cart_count})" if cart_count else "🧺 Корзина"
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -96,7 +172,7 @@ def product_kb(sku: str) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="➕➕ (5)", callback_data=f"add:{sku}:5"),
             ],
             [
-                InlineKeyboardButton(text="🧺 Корзина", callback_data="cart:show"),
+                InlineKeyboardButton(text=cart_label, callback_data="cart:show"),
                 InlineKeyboardButton(text="⬅️ Назад", callback_data="catalog:0:all"),
             ],
         ]
@@ -245,5 +321,23 @@ def delivery_confirm_kb() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="✅ Подтвердить", callback_data="cdek:confirm"),
                 InlineKeyboardButton(text="🔄 Изменить", callback_data="cdek:city:retry"),
             ]
+        ]
+    )
+
+
+def order_confirm_kb() -> InlineKeyboardMarkup:
+    """Клавиатура финального подтверждения заказа."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Подтвердить заказ", callback_data="checkout:final"),
+            ],
+            [
+                InlineKeyboardButton(text="✏️ Изменить телефон", callback_data="checkout:edit:phone"),
+                InlineKeyboardButton(text="📍 Изменить доставку", callback_data="checkout:edit:delivery"),
+            ],
+            [
+                InlineKeyboardButton(text="❌ Отмена", callback_data="cart:show"),
+            ],
         ]
     )

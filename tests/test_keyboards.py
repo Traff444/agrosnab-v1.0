@@ -68,6 +68,21 @@ class TestMainMenuKb:
         assert "mode:ai" in callbacks
         assert "info:terms" in callbacks
 
+    def test_cart_count_displayed(self):
+        from app.keyboards import main_menu_kb
+
+        kb = main_menu_kb(cart_count=5)
+        texts = [btn.text for row in kb.inline_keyboard for btn in row]
+        assert any("(5)" in t for t in texts)
+
+    def test_cart_count_zero_no_parentheses(self):
+        from app.keyboards import main_menu_kb
+
+        kb = main_menu_kb(cart_count=0)
+        texts = [btn.text for row in kb.inline_keyboard for btn in row]
+        cart_text = next(t for t in texts if "Корзина" in t)
+        assert "(" not in cart_text
+
 
 class TestCategoriesKb:
     """Tests for categories_kb() function."""
@@ -214,6 +229,13 @@ class TestProductKb:
         callbacks = [btn.callback_data for row in kb.inline_keyboard for btn in row]
         assert "cart:show" in callbacks
         assert "catalog:0:all" in callbacks
+
+    def test_cart_count_displayed(self):
+        from app.keyboards import product_kb
+
+        kb = product_kb("SKU-001", cart_count=3)
+        texts = [btn.text for row in kb.inline_keyboard for btn in row]
+        assert any("(3)" in t for t in texts)
 
 
 class TestCartKb:
@@ -570,3 +592,144 @@ class TestPvzPerPageConstant:
             row for row in kb.inline_keyboard if row[0].callback_data.startswith("cdek:pvz:")
         ]
         assert len(pvz_buttons) == PVZ_PER_PAGE
+
+
+class TestCatalogGridKb:
+    """Tests for catalog_grid_kb() function."""
+
+    def test_returns_inline_keyboard(self):
+        from app.keyboards import catalog_grid_kb
+
+        products = [{"sku": "SKU-1", "name": "Test", "price_rub": 100}]
+        kb = catalog_grid_kb(products, page=0)
+        assert isinstance(kb, InlineKeyboardMarkup)
+
+    def test_empty_products(self):
+        from app.keyboards import catalog_grid_kb
+
+        kb = catalog_grid_kb([], page=0, category="all")
+        # Should have navigation + categories + cart rows
+        assert len(kb.inline_keyboard) >= 3
+
+    def test_six_products_per_page(self):
+        from app.keyboards import CATALOG_PAGE_SIZE, catalog_grid_kb
+
+        products = [
+            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100}
+            for i in range(10)
+        ]
+        kb = catalog_grid_kb(products, page=0, category="all")
+        # First 6 products in 3 rows of 2
+        product_rows = [
+            row
+            for row in kb.inline_keyboard
+            if any("product:" in btn.callback_data for btn in row)
+        ]
+        assert len(product_rows) == CATALOG_PAGE_SIZE // 2  # 3 rows for 6 items
+
+    def test_cart_count_displayed(self):
+        from app.keyboards import catalog_grid_kb
+
+        products = [{"sku": "SKU-1", "name": "Test", "price_rub": 100}]
+        kb = catalog_grid_kb(products, page=0, cart_count=5)
+        texts = [btn.text for row in kb.inline_keyboard for btn in row]
+        assert any("(5)" in t for t in texts)
+
+    def test_product_name_truncated(self):
+        from app.keyboards import catalog_grid_kb
+
+        products = [{"sku": "SKU-1", "name": "Very Long Product Name Here", "price_rub": 100}]
+        kb = catalog_grid_kb(products, page=0)
+        product_btn = kb.inline_keyboard[0][0]
+        # Name should be truncated with ellipsis
+        assert "…" in product_btn.text
+
+    def test_pagination_navigation(self):
+        from app.keyboards import catalog_grid_kb
+
+        products = [
+            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100}
+            for i in range(15)
+        ]
+        kb = catalog_grid_kb(products, page=0, category="test")
+        callbacks = [btn.callback_data for row in kb.inline_keyboard for btn in row]
+        # Should have next page button
+        assert any("catalog:1:test" in c for c in callbacks)
+
+    def test_category_in_navigation(self):
+        from app.keyboards import catalog_grid_kb
+
+        products = [
+            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100}
+            for i in range(15)
+        ]
+        kb = catalog_grid_kb(products, page=0, category="премиум")
+        callbacks = [btn.callback_data for row in kb.inline_keyboard for btn in row]
+        assert any("премиум" in c for c in callbacks)
+
+    def test_page_indicator_shows_correct_total(self):
+        from app.keyboards import catalog_grid_kb
+
+        products = [
+            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100}
+            for i in range(13)
+        ]  # 3 pages
+        kb = catalog_grid_kb(products, page=1, category="all")
+        texts = [btn.text for row in kb.inline_keyboard for btn in row]
+        assert any("2/3" in t for t in texts)
+
+    def test_empty_products_shows_1_1_pages(self):
+        from app.keyboards import catalog_grid_kb
+
+        kb = catalog_grid_kb([], page=0)
+        texts = [btn.text for row in kb.inline_keyboard for btn in row]
+        # Should show "1/1" not "1/0"
+        assert any("1/1" in t for t in texts)
+
+
+class TestOrderConfirmKb:
+    """Tests for order_confirm_kb() function."""
+
+    def test_returns_inline_keyboard(self):
+        from app.keyboards import order_confirm_kb
+
+        kb = order_confirm_kb()
+        assert isinstance(kb, InlineKeyboardMarkup)
+
+    def test_has_confirm_button(self):
+        from app.keyboards import order_confirm_kb
+
+        kb = order_confirm_kb()
+        callbacks = [btn.callback_data for row in kb.inline_keyboard for btn in row]
+        assert "checkout:final" in callbacks
+
+    def test_has_edit_buttons(self):
+        from app.keyboards import order_confirm_kb
+
+        kb = order_confirm_kb()
+        callbacks = [btn.callback_data for row in kb.inline_keyboard for btn in row]
+        assert "checkout:edit:phone" in callbacks
+        assert "checkout:edit:delivery" in callbacks
+
+    def test_has_cancel_button(self):
+        from app.keyboards import order_confirm_kb
+
+        kb = order_confirm_kb()
+        callbacks = [btn.callback_data for row in kb.inline_keyboard for btn in row]
+        assert "cart:show" in callbacks
+
+    def test_confirm_button_text(self):
+        from app.keyboards import order_confirm_kb
+
+        kb = order_confirm_kb()
+        confirm_btn = kb.inline_keyboard[0][0]
+        assert "Подтвердить" in confirm_btn.text
+
+
+class TestCatalogPageSizeConstant:
+    """Tests for CATALOG_PAGE_SIZE constant."""
+
+    def test_constant_value(self):
+        from app.keyboards import CATALOG_PAGE_SIZE
+
+        assert CATALOG_PAGE_SIZE == 6

@@ -84,6 +84,26 @@ async def get_cart(user_id: int) -> list[CartItem]:
         return [(r[0], int(r[1])) for r in rows]
 
 
+async def get_cart_count(user_id: int) -> int:
+    """Get total quantity of items in cart."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "SELECT COALESCE(SUM(qty), 0) FROM cart_items WHERE user_id=?", (user_id,)
+        )
+        row = await cur.fetchone()
+        return int(row[0]) if row else 0
+
+
+async def get_cart_items_count(user_id: int) -> int:
+    """Get number of unique items (SKUs) in cart."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "SELECT COUNT(*) FROM cart_items WHERE user_id=?", (user_id,)
+        )
+        row = await cur.fetchone()
+        return int(row[0]) if row else 0
+
+
 # ---------------------------------------------------------------------------
 # Checkout session helpers (idempotency)
 # ---------------------------------------------------------------------------

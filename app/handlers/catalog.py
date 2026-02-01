@@ -10,7 +10,14 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .. import cart_store
-from ..keyboards import back_to_menu_kb, categories_kb, main_menu_kb, product_kb
+from ..keyboards import (
+    CATALOG_PAGE_SIZE,
+    back_to_menu_kb,
+    catalog_grid_kb,
+    categories_kb,
+    main_menu_kb,
+    product_kb,
+)
 from ..services import ProductService
 from ..sheets import SheetsClient
 from .common import format_product, format_product_card
@@ -50,36 +57,14 @@ def register_catalog_handlers(
             await m.answer("Каталог пуст.", reply_markup=main_menu_kb())
             return
 
-        product = products[0]
-        caption = format_product_card(product)
+        # Get cart count for button label
+        cart_count = await cart_store.get_cart_count(user_id)
 
-        nav_row = [InlineKeyboardButton(text=f"📄 1/{len(products)}", callback_data="noop")]
-        if len(products) > 1:
-            nav_row.append(InlineKeyboardButton(text="След. ➡️", callback_data="catalog:1:all"))
-
-        kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="🛒 В корзину", callback_data=f"add:{product['sku']}:1"
-                    )
-                ],
-                nav_row,
-                [
-                    InlineKeyboardButton(text="🧺 Корзина", callback_data="cart:show"),
-                    InlineKeyboardButton(text="📋 Меню", callback_data="menu"),
-                ],
-            ]
-        )
-
-        photo_url = product.get("photo_url", "")
-        if photo_url:
-            try:
-                await m.answer_photo(photo_url, caption=caption, parse_mode="HTML", reply_markup=kb)
-            except Exception:
-                await m.answer(caption, parse_mode="HTML", reply_markup=kb)
-        else:
-            await m.answer(caption, parse_mode="HTML", reply_markup=kb)
+        # Show grid of products
+        total_pages = (len(products) + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE
+        text = f"🗂 <b>Каталог</b>\n\n📦 {len(products)} товаров • Страница 1/{total_pages}\n\nВыберите товар:"
+        kb = catalog_grid_kb(products, page=0, category="all", cart_count=cart_count)
+        await m.answer(text, parse_mode="HTML", reply_markup=kb)
 
     @dp.callback_query(F.data.startswith("catalog:"))
     async def catalog(cb: CallbackQuery):
@@ -117,67 +102,27 @@ def register_catalog_handlers(
             await cb.answer()
             return
 
-        # Show one product per page with photo
-        page = max(0, min(page, total_items - 1))
-        product = products[page]
+        # Calculate page bounds
+        total_pages = (total_items + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE
+        page = max(0, min(page, total_pages - 1))
 
-        caption = format_product_card(product)
+        # Get cart count for button label
+        cart_count = await cart_store.get_cart_count(user_id)
 
-        # Navigation keyboard for visual catalog
-        nav_row = []
-        if page > 0:
-            nav_row.append(
-                InlineKeyboardButton(text="⬅️ Пред.", callback_data=f"catalog:{page - 1}:{category}")
-            )
-        nav_row.append(
-            InlineKeyboardButton(text=f"📄 {page + 1}/{total_items}", callback_data="noop")
+        # Category label for display
+        category_label = "Все товары" if category == "all" else category
+
+        text = (
+            f"🗂 <b>Каталог</b> • {category_label}\n\n"
+            f"📦 {total_items} товаров • Страница {page + 1}/{total_pages}\n\n"
+            "Выберите товар:"
         )
-        if page < total_items - 1:
-            nav_row.append(
-                InlineKeyboardButton(text="След. ➡️", callback_data=f"catalog:{page + 1}:{category}")
-            )
+        kb = catalog_grid_kb(products, page=page, category=category, cart_count=cart_count)
 
-        kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text="🛒 В корзину", callback_data=f"add:{product['sku']}:1"
-                    ),
-                    InlineKeyboardButton(text="➕ 5 шт.", callback_data=f"add:{product['sku']}:5"),
-                ],
-                nav_row,
-                [
-                    InlineKeyboardButton(text="📋 Категории", callback_data="categories"),
-                    InlineKeyboardButton(text="🔍 Поиск", callback_data="search:start"),
-                ],
-                [
-                    InlineKeyboardButton(text="🧺 Корзина", callback_data="cart:show"),
-                    InlineKeyboardButton(text="🏠 Меню", callback_data="menu"),
-                ],
-            ]
-        )
-
-        photo_url = product.get("photo_url", "")
-
-        # Try to send/edit with photo
-        if photo_url:
-            try:
-                # Delete old message and send new photo
-                await cb.message.delete()
-                await cb.message.answer_photo(
-                    photo_url, caption=caption, parse_mode="HTML", reply_markup=kb
-                )
-            except Exception:
-                # Fallback to text if photo fails
-                try:
-                    await cb.message.edit_text(caption, parse_mode="HTML", reply_markup=kb)
-                except Exception:
-                    await cb.message.answer(caption, parse_mode="HTML", reply_markup=kb)
-        else:
-            try:
-                await cb.message.edit_text(caption, parse_mode="HTML", reply_markup=kb)
-            except Exception:
-                await cb.message.answer(caption, parse_mode="HTML", reply_markup=kb)
+        try:
+            await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
+        except Exception:
+            await cb.message.answer(text, parse_mode="HTML", reply_markup=kb)
 
         await cb.answer()
 
@@ -264,7 +209,11 @@ def register_catalog_handlers(
         except Exception as e:
             logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
+        # Get cart count for display
+        cart_count = await cart_store.get_cart_count(user_id)
+
         text = format_product(product, compact=False)
+        kb = product_kb(sku, cart_count)
 
         if product.get("photo_url"):
             try:
@@ -272,10 +221,10 @@ def register_catalog_handlers(
                     product["photo_url"],
                     caption=text,
                     parse_mode="HTML",
-                    reply_markup=product_kb(sku),
+                    reply_markup=kb,
                 )
             except Exception:
-                await cb.message.answer(text, parse_mode="HTML", reply_markup=product_kb(sku))
+                await cb.message.answer(text, parse_mode="HTML", reply_markup=kb)
         else:
-            await cb.message.answer(text, parse_mode="HTML", reply_markup=product_kb(sku))
+            await cb.message.answer(text, parse_mode="HTML", reply_markup=kb)
         await cb.answer()

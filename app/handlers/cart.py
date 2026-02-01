@@ -16,10 +16,16 @@ from .. import cart_store
 from ..cdek import CdekPvz, get_cdek_client
 from ..config import Settings
 from ..invoice import generate_invoice_pdf
-from ..keyboards import city_select_kb, delivery_confirm_kb, pvz_select_kb
+from ..keyboards import (
+    city_select_kb,
+    delivery_confirm_kb,
+    main_menu_kb,
+    order_confirm_kb,
+    pvz_select_kb,
+)
 from ..services import CartService, ProductService
 from ..sheets import SheetsClient, retry_async
-from ..utils import make_order_id, validate_phone
+from ..utils import escape_html, make_order_id, validate_phone
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +36,7 @@ class CheckoutState(StatesGroup):
     city_select = State()
     pvz_select = State()
     delivery_manual = State()  # fallback or manual entry
+    confirm = State()  # order confirmation before payment
 
 
 def register_cart_handlers(
@@ -172,6 +179,19 @@ def register_cart_handlers(
 
         await message.answer("✅ Счет сформирован. Отправляю PDF…")
         await message.answer_document(FSInputFile(out_pdf), caption=f"Счет № {invoice_no}")
+
+        # Thank you message with order details
+        thank_you = (
+            f"🎉 <b>Спасибо за заказ!</b>\n\n"
+            f"📋 Номер заказа: <code>{order_id}</code>\n"
+            f"💰 Сумма: <b>{total:,} ₽</b>\n\n"
+            f"📦 <b>Что дальше:</b>\n"
+            f"1. Оплатите счёт (PDF выше)\n"
+            f"2. Мы подготовим ваш заказ\n"
+            f"3. Доставим в указанное место\n\n"
+            f"❓ Вопросы? Напишите нам!"
+        )
+        await message.answer(thank_you, parse_mode="HTML", reply_markup=main_menu_kb())
 
         await cart_store.clear_cart(user_id)
         await cart_store.cleanup_old_checkout_sessions(user_id)
@@ -349,7 +369,13 @@ def register_cart_handlers(
         data = await state.get_data()
         phone = str(data.get("phone", "")).strip()
         delivery = (m.text or "").strip()
-        await finalize_checkout(m.from_user.id, phone, delivery, m, state)
+
+        # Validate delivery address
+        if len(delivery) < 5:
+            await m.answer("⚠️ Адрес слишком короткий. Введите полный адрес доставки:")
+            return
+
+        await show_order_confirmation(m.from_user.id, phone, delivery, m, state)
 
     @dp.message(CheckoutState.city_input)
     async def cdek_city_input(m: Message, state: FSMContext):
@@ -485,6 +511,36 @@ def register_cart_handlers(
         await cb.message.answer(f"Проверьте ПВЗ:\n\n{pvz_obj.full_display()}", reply_markup=delivery_confirm_kb())
         await cb.answer()
 
+    async def show_order_confirmation(
+        user_id: int,
+        phone: str,
+        delivery: str,
+        message: Message,
+        state: FSMContext,
+    ) -> None:
+        """Show order confirmation screen before finalizing."""
+        lines, total, _ = await cart_service.calc_cart_for_checkout(user_id)
+
+        if not lines:
+            await message.answer("Корзина пуста. Начните сначала.")
+            await state.clear()
+            return
+
+        items_text = "\n".join(lines)
+        escaped_delivery = escape_html(delivery)
+        text = (
+            "✅ <b>Подтверждение заказа</b>\n\n"
+            f"📦 <b>Товары:</b>\n{items_text}\n\n"
+            f"💰 <b>Итого: {total:,} ₽</b>\n\n"
+            f"📞 Телефон: <code>{phone}</code>\n"
+            f"📍 Доставка: {escaped_delivery}\n\n"
+            "Всё верно?"
+        )
+
+        await state.update_data(phone=phone, delivery=delivery)
+        await state.set_state(CheckoutState.confirm)
+        await message.answer(text, parse_mode="HTML", reply_markup=order_confirm_kb())
+
     @dp.callback_query(F.data == "cdek:confirm")
     async def cdek_confirm(cb: CallbackQuery, state: FSMContext):
         data = await state.get_data()
@@ -499,4 +555,45 @@ def register_cart_handlers(
         delivery = f"ПВЗ СДЭК: {address} ({code})" if code else f"ПВЗ СДЭК: {address}"
 
         await cb.answer()
+        await show_order_confirmation(cb.from_user.id, phone, delivery, cb.message, state)
+
+    @dp.callback_query(F.data == "checkout:final")
+    async def checkout_final(cb: CallbackQuery, state: FSMContext):
+        """Finalize order after user confirmation."""
+        data = await state.get_data()
+        phone = str(data.get("phone", "")).strip()
+        delivery = str(data.get("delivery", "")).strip()
+
+        if not phone or not delivery:
+            await cb.answer("Данные заказа неполны. Начните сначала.", show_alert=True)
+            await state.clear()
+            return
+
+        # Validate cart is not empty before finalizing
+        cart_items = await cart_store.get_cart(cb.from_user.id)
+        if not cart_items:
+            await cb.answer("Корзина пуста. Начните сначала.", show_alert=True)
+            await state.clear()
+            return
+
+        await cb.answer()
         await finalize_checkout(cb.from_user.id, phone, delivery, cb.message, state)
+
+    @dp.callback_query(F.data == "checkout:edit:phone")
+    async def checkout_edit_phone(cb: CallbackQuery, state: FSMContext):
+        """Return to phone input step."""
+        await state.set_state(CheckoutState.phone)
+        await cb.message.answer("📞 Введите новый номер телефона:")
+        await cb.answer()
+
+    @dp.callback_query(F.data == "checkout:edit:delivery")
+    async def checkout_edit_delivery(cb: CallbackQuery, state: FSMContext):
+        """Return to delivery selection."""
+        cdek_client = get_cdek_client()
+        if cdek_client:
+            await state.set_state(CheckoutState.city_input)
+            await cb.message.answer("📍 Введите город:")
+        else:
+            await state.set_state(CheckoutState.delivery_manual)
+            await cb.message.answer("📍 Введите адрес доставки:")
+        await cb.answer()

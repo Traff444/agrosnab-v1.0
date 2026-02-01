@@ -12,6 +12,9 @@ from .product_service import ProductService
 
 logger = logging.getLogger(__name__)
 
+# Maximum unique items in cart to prevent Telegram button overflow
+MAX_CART_ITEMS = 20
+
 
 @dataclass
 class CartSummary:
@@ -108,10 +111,16 @@ class CartService:
         if product["stock"] <= 0:
             return False, f"Товар «{product['name']}» закончился на складе"
 
-        # Check current cart qty + new qty doesn't exceed stock
+        # Check current cart state
         cart_items = await cart_store.get_cart(user_id)
         current_qty = next((q for s, q in cart_items if s == sku), 0)
+        is_new_item = current_qty == 0
 
+        # Check cart items limit (Telegram button overflow prevention)
+        if is_new_item and len(cart_items) >= MAX_CART_ITEMS:
+            return False, f"⚠️ В корзине максимум {MAX_CART_ITEMS} позиций. Оформите заказ или удалите лишнее."
+
+        # Check current cart qty + new qty doesn't exceed stock
         if current_qty + qty > product["stock"]:
             available = product["stock"] - current_qty
             if available <= 0:
