@@ -87,9 +87,7 @@ async def handle_product_photo(callback: CallbackQuery, state: FSMContext) -> No
 @router.callback_query(F.data.startswith("product_edit_"))
 async def handle_product_edit(callback: CallbackQuery) -> None:
     """Handle product edit - placeholder for future implementation."""
-    await callback.answer(
-        "✏️ Редактирование будет доступно в следующей версии", show_alert=True
-    )
+    await callback.answer("✏️ Редактирование будет доступно в следующей версии", show_alert=True)
 
 
 @router.callback_query(F.data.startswith("product_more_"))
@@ -108,9 +106,7 @@ async def handle_product_more(callback: CallbackQuery) -> None:
 
     await callback.answer()
     try:
-        await callback.message.edit_reply_markup(
-            reply_markup=product_more_keyboard(product)
-        )
+        await callback.message.edit_reply_markup(reply_markup=product_more_keyboard(product))
     except TelegramBadRequest as e:
         logger.debug("Cannot edit reply markup for more menu: %s", e)
 
@@ -131,8 +127,6 @@ async def handle_product_back(callback: CallbackQuery, state: FSMContext) -> Non
 
     await callback.answer()
     try:
-        await callback.message.edit_reply_markup(
-            reply_markup=product_actions_keyboard(product)
-        )
+        await callback.message.edit_reply_markup(reply_markup=product_actions_keyboard(product))
     except TelegramBadRequest as e:
         logger.debug("Cannot edit reply markup for back: %s", e)

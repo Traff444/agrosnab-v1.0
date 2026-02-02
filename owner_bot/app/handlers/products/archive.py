@@ -48,9 +48,7 @@ async def show_archive_menu(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
 
-@router.callback_query(
-    StockOperationState.archive_menu, F.data.startswith("archive_simple_")
-)
+@router.callback_query(StockOperationState.archive_menu, F.data.startswith("archive_simple_"))
 async def handle_archive_simple(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle simple archive (deactivate only, no stock change)."""
     if not callback.data:
@@ -89,9 +87,7 @@ async def handle_archive_simple(callback: CallbackQuery, state: FSMContext) -> N
     )
 
 
-@router.callback_query(
-    StockOperationState.archive_menu, F.data.startswith("archive_zero_")
-)
+@router.callback_query(StockOperationState.archive_menu, F.data.startswith("archive_zero_"))
 async def handle_archive_zero(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle archive with zero out (writeoff remaining stock + deactivate)."""
     if not callback.data:
@@ -131,7 +127,6 @@ async def handle_archive_zero(callback: CallbackQuery, state: FSMContext) -> Non
         stock_note = "\nОстаток уже 0, списание не требуется."
 
     await callback.message.answer(
-        f"🧹 **Подтверждение архивации с обнулением**\n\n"
-        f"Товар: {name} (`{sku}`){stock_note}",
+        f"🧹 **Подтверждение архивации с обнулением**\n\nТовар: {name} (`{sku}`){stock_note}",
         reply_markup=confirmation_keyboard(action_id),
     )

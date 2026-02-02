@@ -52,29 +52,21 @@ class TestApplyWriteoff:
         client = sheets_client_with_mocks
 
         # Mock get_product_by_row
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
             # Mock append_log_entry
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
                 # Mock update_product_stock
                 with patch.object(
                     client, "update_product_stock", new_callable=AsyncMock
                 ) as mock_update:
-                    mock_update.return_value = Product(
-                        **{**mock_product.__dict__, "stock": 7}
-                    )
+                    mock_update.return_value = Product(**{**mock_product.__dict__, "stock": 7})
 
                     # Mock _increment_total_column
-                    with patch.object(
-                        client, "_increment_total_column", new_callable=AsyncMock
-                    ):
+                    with patch.object(client, "_increment_total_column", new_callable=AsyncMock):
                         result = await client.apply_writeoff(
                             row_number=5,
                             qty=3,
@@ -89,26 +81,19 @@ class TestApplyWriteoff:
         assert result.error is None
 
     @pytest.mark.asyncio
-    async def test_writeoff_logs_to_spisanie_sheet(
-        self, sheets_client_with_mocks, mock_product
-    ):
+    async def test_writeoff_logs_to_spisanie_sheet(self, sheets_client_with_mocks, mock_product):
         """Writeoff should log to 'Списание' sheet with correct fields."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(client, "_increment_total_column", new_callable=AsyncMock),
                 ):
                     await client.apply_writeoff(
                         row_number=5,
@@ -133,15 +118,11 @@ class TestApplyWriteoff:
             assert call_kwargs["actor_username"] == "testuser"
 
     @pytest.mark.asyncio
-    async def test_writeoff_rejects_zero_qty(
-        self, sheets_client_with_mocks, mock_product
-    ):
+    async def test_writeoff_rejects_zero_qty(self, sheets_client_with_mocks, mock_product):
         """Writeoff should reject qty <= 0."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
             result = await client.apply_writeoff(
@@ -156,15 +137,11 @@ class TestApplyWriteoff:
         assert "больше 0" in result.error
 
     @pytest.mark.asyncio
-    async def test_writeoff_rejects_negative_qty(
-        self, sheets_client_with_mocks, mock_product
-    ):
+    async def test_writeoff_rejects_negative_qty(self, sheets_client_with_mocks, mock_product):
         """Writeoff should reject negative qty."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
             result = await client.apply_writeoff(
@@ -185,9 +162,7 @@ class TestApplyWriteoff:
         """Writeoff should reject qty > current stock."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
             result = await client.apply_writeoff(
@@ -208,9 +183,7 @@ class TestApplyWriteoff:
         """Duplicate operation_id should be detected and skipped."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
             # Mock _check_operation_exists to return True (duplicate found)
@@ -227,9 +200,7 @@ class TestApplyWriteoff:
                     with patch.object(
                         client, "update_product_stock", new_callable=AsyncMock
                     ) as mock_update:
-                        mock_update.return_value = Product(
-                            **{**mock_product.__dict__, "stock": 7}
-                        )
+                        mock_update.return_value = Product(**{**mock_product.__dict__, "stock": 7})
 
                         with patch.object(
                             client, "_increment_total_column", new_callable=AsyncMock
@@ -247,15 +218,11 @@ class TestApplyWriteoff:
         assert result.ok is True
 
     @pytest.mark.asyncio
-    async def test_writeoff_returns_error_when_product_not_found(
-        self, sheets_client_with_mocks
-    ):
+    async def test_writeoff_returns_error_when_product_not_found(self, sheets_client_with_mocks):
         """Writeoff should return error if product not found."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = None
 
             result = await client.apply_writeoff(
@@ -276,21 +243,18 @@ class TestApplyWriteoff:
         """Writeoff should update Списано_всего if column exists."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
-                ) as mock_increment:
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(
+                        client, "_increment_total_column", new_callable=AsyncMock
+                    ) as mock_increment,
+                ):
                     await client.apply_writeoff(
                         row_number=5,
                         qty=3,
@@ -309,20 +273,15 @@ class TestApplyWriteoff:
         """Operation ID should be preserved in result for retry scenarios."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(client, "_increment_total_column", new_callable=AsyncMock),
                 ):
                     # Test with provided operation_id
                     result = await client.apply_writeoff(
@@ -343,20 +302,15 @@ class TestApplyWriteoff:
         """Operation ID should be generated if not provided."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(client, "_increment_total_column", new_callable=AsyncMock),
                 ):
                     result = await client.apply_writeoff(
                         row_number=5,

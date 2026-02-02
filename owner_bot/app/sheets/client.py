@@ -97,9 +97,7 @@ class BaseSheetsClient:
 
         try:
             result = (
-                self.service.spreadsheets()
-                .get(spreadsheetId=settings.google_sheets_id)
-                .execute()
+                self.service.spreadsheets().get(spreadsheetId=settings.google_sheets_id).execute()
             )
 
             sheets = [s["properties"]["title"] for s in result.get("sheets", [])]

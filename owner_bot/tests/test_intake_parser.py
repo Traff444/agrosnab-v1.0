@@ -1,6 +1,5 @@
 """Tests for intake string parser."""
 
-
 from app.intake_parser import format_parsed_intake, parse_intake_string
 from app.models import IntakeConfidence
 

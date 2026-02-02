@@ -50,9 +50,7 @@ class CRMOperationsMixin:
         leads.sort(key=lambda x: x.get("last_seen_at", ""), reverse=True)
         return leads[:limit]
 
-    async def get_lead_by_user_id(
-        self: BaseSheetsClient, user_id: int
-    ) -> dict[str, Any] | None:
+    async def get_lead_by_user_id(self: BaseSheetsClient, user_id: int) -> dict[str, Any] | None:
         """Get a specific lead by user_id."""
         leads = await self.get_leads(limit=10000)
         for lead in leads:
@@ -63,9 +61,7 @@ class CRMOperationsMixin:
                 continue
         return None
 
-    async def search_leads(
-        self: BaseSheetsClient, query: str
-    ) -> list[dict[str, Any]]:
+    async def search_leads(self: BaseSheetsClient, query: str) -> list[dict[str, Any]]:
         """Search leads by user_id, phone, or username."""
         leads = await self.get_leads(limit=10000)
         results = []
@@ -91,9 +87,7 @@ class CRMOperationsMixin:
 
         return results[:20]
 
-    async def update_lead_notes(
-        self: BaseSheetsClient, user_id: int, notes: str
-    ) -> bool:
+    async def update_lead_notes(self: BaseSheetsClient, user_id: int, notes: str) -> bool:
         """Update notes for a lead."""
         settings = get_settings()
 
@@ -119,9 +113,7 @@ class CRMOperationsMixin:
 
         return True
 
-    async def update_lead_tags(
-        self: BaseSheetsClient, user_id: int, tags: str
-    ) -> bool:
+    async def update_lead_tags(self: BaseSheetsClient, user_id: int, tags: str) -> bool:
         """Update tags for a lead."""
         settings = get_settings()
 
@@ -201,9 +193,7 @@ class CRMOperationsMixin:
                     order_total = 0
                     if len(row) > 5:
                         with contextlib.suppress(ValueError, TypeError):
-                            order_total = int(
-                                float(str(row[5]).replace(" ", "").replace(",", "."))
-                            )
+                            order_total = int(float(str(row[5]).replace(" ", "").replace(",", ".")))
                     today_orders.append(
                         {
                             "order_id": row[0] if row else "",

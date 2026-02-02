@@ -20,11 +20,7 @@ class LoggingOperationsMixin:
         """Ensure a sheet exists, create if missing. Returns True on success."""
         settings = get_settings()
 
-        result = (
-            self.service.spreadsheets()
-            .get(spreadsheetId=settings.google_sheets_id)
-            .execute()
-        )
+        result = self.service.spreadsheets().get(spreadsheetId=settings.google_sheets_id).execute()
 
         sheets = [s["properties"]["title"] for s in result.get("sheets", [])]
 
@@ -38,9 +34,7 @@ class LoggingOperationsMixin:
 
         return True
 
-    async def ensure_log_columns(
-        self: BaseSheetsClient, sheet_name: str
-    ) -> dict[str, int]:
+    async def ensure_log_columns(self: BaseSheetsClient, sheet_name: str) -> dict[str, int]:
         """
         Ensure log sheet has all required columns (self-heal).
         Returns column mapping {col_name: index}.
@@ -63,9 +57,7 @@ class LoggingOperationsMixin:
             .execute()
         )
 
-        existing_headers = (
-            result.get("values", [[]])[0] if result.get("values") else []
-        )
+        existing_headers = result.get("values", [[]])[0] if result.get("values") else []
 
         col_map = {header: idx for idx, header in enumerate(existing_headers)}
 
@@ -538,12 +530,8 @@ class LoggingOperationsMixin:
                 )
 
             try:
-                await self.update_product_stock(
-                    product, -stock_before, f"tg:{actor_username}"
-                )
-                await self._increment_total_column(
-                    row_number, "Списано_всего", stock_before
-                )
+                await self.update_product_stock(product, -stock_before, f"tg:{actor_username}")
+                await self._increment_total_column(row_number, "Списано_всего", stock_before)
             except Exception as e:
                 logger.error("Failed to zero out stock: %s", e)
                 return StockOperationResult(

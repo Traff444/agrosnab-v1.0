@@ -46,9 +46,7 @@ async def set_qty(user_id: int, sku: str, qty: int) -> None:
     """Set specific quantity for item in cart."""
     async with aiosqlite.connect(DB_PATH) as db:
         if qty <= 0:
-            await db.execute(
-                "DELETE FROM cart_items WHERE user_id=? AND sku=?", (user_id, sku)
-            )
+            await db.execute("DELETE FROM cart_items WHERE user_id=? AND sku=?", (user_id, sku))
         else:
             await db.execute(
                 "INSERT INTO cart_items(user_id, sku, qty) VALUES(?, ?, ?) "
@@ -61,9 +59,7 @@ async def set_qty(user_id: int, sku: str, qty: int) -> None:
 async def remove_from_cart(user_id: int, sku: str) -> None:
     """Remove item from cart entirely."""
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            "DELETE FROM cart_items WHERE user_id=? AND sku=?", (user_id, sku)
-        )
+        await db.execute("DELETE FROM cart_items WHERE user_id=? AND sku=?", (user_id, sku))
         await db.commit()
 
 
@@ -97,9 +93,7 @@ async def get_cart_count(user_id: int) -> int:
 async def get_cart_items_count(user_id: int) -> int:
     """Get number of unique items (SKUs) in cart."""
     async with aiosqlite.connect(DB_PATH) as db:
-        cur = await db.execute(
-            "SELECT COUNT(*) FROM cart_items WHERE user_id=?", (user_id,)
-        )
+        cur = await db.execute("SELECT COUNT(*) FROM cart_items WHERE user_id=?", (user_id,))
         row = await cur.fetchone()
         return int(row[0]) if row else 0
 
@@ -148,9 +142,7 @@ async def get_or_create_checkout_session(
             (user_id, cart_hash, order_id),
         )
         await db.commit()
-        logger.info(
-            "Created new checkout session for user %s: order_id=%s", user_id, order_id
-        )
+        logger.info("Created new checkout session for user %s: order_id=%s", user_id, order_id)
         return order_id, True
 
 

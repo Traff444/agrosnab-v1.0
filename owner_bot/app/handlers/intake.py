@@ -71,7 +71,9 @@ async def start_intake(message: Message, state: FSMContext) -> None:
     )
 
 
-@router.message(IntakeState.waiting_for_input, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
+@router.message(
+    IntakeState.waiting_for_input, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"})
+)
 async def process_input(message: Message, state: FSMContext) -> None:
     """Process initial input (quick string or name)."""
     if not message.from_user or not message.text:
@@ -105,7 +107,9 @@ async def process_input(message: Message, state: FSMContext) -> None:
             await _check_matching_products(message, state, session)
 
 
-@router.message(IntakeState.waiting_for_name, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
+@router.message(
+    IntakeState.waiting_for_name, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"})
+)
 async def process_name(message: Message, state: FSMContext) -> None:
     """Process product name input."""
     if not message.from_user or not message.text:
@@ -129,7 +133,9 @@ async def process_name(message: Message, state: FSMContext) -> None:
         await _check_matching_products(message, state, session)
 
 
-@router.message(IntakeState.waiting_for_price, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
+@router.message(
+    IntakeState.waiting_for_price, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"})
+)
 async def process_price(message: Message, state: FSMContext) -> None:
     """Process price input."""
     if not message.from_user or not message.text:
@@ -157,7 +163,9 @@ async def process_price(message: Message, state: FSMContext) -> None:
         await _check_matching_products(message, state, session)
 
 
-@router.message(IntakeState.waiting_for_quantity, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
+@router.message(
+    IntakeState.waiting_for_quantity, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"})
+)
 async def process_quantity(message: Message, state: FSMContext) -> None:
     """Process quantity input."""
     if not message.from_user or not message.text:
@@ -308,7 +316,9 @@ async def handle_quick_weight(callback: CallbackQuery, state: FSMContext) -> Non
         await _ask_photo_decision(callback.message, state, session)
 
 
-@router.message(IntakeState.waiting_for_weight, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
+@router.message(
+    IntakeState.waiting_for_weight, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"})
+)
 async def process_weight(message: Message, state: FSMContext) -> None:
     """Process weight input."""
     if not message.from_user or not message.text:
@@ -341,9 +351,7 @@ async def process_weight(message: Message, state: FSMContext) -> None:
 
 async def _ask_photo_decision(message: Message, state: FSMContext, session) -> None:
     """Ask about photo upload."""
-    has_photo = bool(
-        session.existing_product and session.existing_product.photo_url
-    )
+    has_photo = bool(session.existing_product and session.existing_product.photo_url)
 
     await state.set_state(IntakeState.waiting_for_photo_decision)
 
@@ -543,7 +551,10 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
 
     logger.debug(
         "process_preview_confirm: session found, is_new=%s, name=%s, qty=%s, drive_url=%s",
-        session.is_new_product, session.name, session.quantity, session.drive_url
+        session.is_new_product,
+        session.name,
+        session.quantity,
+        session.drive_url,
     )
 
     await callback.answer()
@@ -556,7 +567,9 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
 
         logger.debug(
             "process_preview_confirm: result.success=%s, is_new=%s, error=%s",
-            result.success, result.is_new, result.error
+            result.success,
+            result.is_new,
+            result.error,
         )
 
         if result.success:

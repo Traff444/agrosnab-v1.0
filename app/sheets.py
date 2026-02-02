@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 # CRM Stage priorities (higher = further in funnel)
 STAGE_PRIORITY = {
-    'new': 1,
-    'engaged': 2,
-    'cart': 3,
-    'checkout': 4,
-    'customer': 5,
-    'repeat': 6,
+    "new": 1,
+    "engaged": 2,
+    "cart": 3,
+    "checkout": 4,
+    "customer": 5,
+    "repeat": 6,
 }
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -364,9 +364,19 @@ class SheetsClient:
     # J: consent_version, K: phone, L: tags, M: notes
 
     LEADS_COLUMNS = [
-        'user_id', 'username', 'first_seen_at', 'last_seen_at', 'stage',
-        'orders_count', 'lifetime_value', 'last_order_id', 'consent_at',
-        'consent_version', 'phone', 'tags', 'notes'
+        "user_id",
+        "username",
+        "first_seen_at",
+        "last_seen_at",
+        "stage",
+        "orders_count",
+        "lifetime_value",
+        "last_order_id",
+        "consent_at",
+        "consent_version",
+        "phone",
+        "tags",
+        "notes",
     ]
 
     def _get_leads_data_sync(self) -> tuple[list[list[Any]], dict[int, int]]:
@@ -407,13 +417,13 @@ class SheetsClient:
         row = rows[row_idx]
         lead = {}
         for i, col_name in enumerate(self.LEADS_COLUMNS):
-            lead[col_name] = row[i] if i < len(row) else ''
+            lead[col_name] = row[i] if i < len(row) else ""
 
         # Convert numeric fields
         try:
-            lead['user_id'] = int(lead['user_id']) if lead['user_id'] else 0
-            lead['orders_count'] = int(lead['orders_count']) if lead['orders_count'] else 0
-            lead['lifetime_value'] = int(lead['lifetime_value']) if lead['lifetime_value'] else 0
+            lead["user_id"] = int(lead["user_id"]) if lead["user_id"] else 0
+            lead["orders_count"] = int(lead["orders_count"]) if lead["orders_count"] else 0
+            lead["lifetime_value"] = int(lead["lifetime_value"]) if lead["lifetime_value"] else 0
         except (ValueError, TypeError):
             pass
 
@@ -439,7 +449,7 @@ class SheetsClient:
         Returns True if successful.
         """
         rows, user_map = await asyncio.to_thread(self._get_leads_data_sync)
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         if user_id in user_map:
             # Update existing lead
@@ -448,10 +458,10 @@ class SheetsClient:
 
             # Pad row to full length
             while len(existing_row) < len(self.LEADS_COLUMNS):
-                existing_row.append('')
+                existing_row.append("")
 
             # Get current values
-            current_stage = existing_row[4] if len(existing_row) > 4 else ''
+            current_stage = existing_row[4] if len(existing_row) > 4 else ""
 
             # Compute new stage (only goes up)
             if stage:
@@ -467,10 +477,14 @@ class SheetsClient:
             if username is not None:
                 existing_row[1] = username
             if consent_at is not None:
-                consent_str = consent_at.strftime('%Y-%m-%d %H:%M:%S') if isinstance(consent_at, datetime) else consent_at
+                consent_str = (
+                    consent_at.strftime("%Y-%m-%d %H:%M:%S")
+                    if isinstance(consent_at, datetime)
+                    else consent_at
+                )
                 if not existing_row[8]:  # Don't overwrite existing consent
                     existing_row[8] = consent_str
-                    existing_row[9] = 'v1'
+                    existing_row[9] = "v1"
             if phone is not None and phone:
                 existing_row[10] = phone
             if orders_count is not None:
@@ -492,26 +506,30 @@ class SheetsClient:
 
         else:
             # Create new lead
-            consent_str = ''
-            consent_version = ''
+            consent_str = ""
+            consent_version = ""
             if consent_at is not None:
-                consent_str = consent_at.strftime('%Y-%m-%d %H:%M:%S') if isinstance(consent_at, datetime) else consent_at
-                consent_version = 'v1'
+                consent_str = (
+                    consent_at.strftime("%Y-%m-%d %H:%M:%S")
+                    if isinstance(consent_at, datetime)
+                    else consent_at
+                )
+                consent_version = "v1"
 
             new_row = [
-                str(user_id),           # A: user_id
-                username or '',          # B: username
-                now,                     # C: first_seen_at
-                now,                     # D: last_seen_at
-                stage or 'new',          # E: stage
+                str(user_id),  # A: user_id
+                username or "",  # B: username
+                now,  # C: first_seen_at
+                now,  # D: last_seen_at
+                stage or "new",  # E: stage
                 str(orders_count or 0),  # F: orders_count
-                str(lifetime_value or 0),# G: lifetime_value
-                last_order_id or '',     # H: last_order_id
-                consent_str,             # I: consent_at
-                consent_version,         # J: consent_version
-                phone or '',             # K: phone
-                tags or '',              # L: tags
-                notes or '',             # M: notes
+                str(lifetime_value or 0),  # G: lifetime_value
+                last_order_id or "",  # H: last_order_id
+                consent_str,  # I: consent_at
+                consent_version,  # J: consent_version
+                phone or "",  # K: phone
+                tags or "",  # L: tags
+                notes or "",  # M: notes
             ]
 
             await self.append_values("Leads!A1", [new_row])
@@ -524,31 +542,49 @@ class SheetsClient:
         results = []
 
         query_lower = query.lower().strip()
-        query_digits = ''.join(c for c in query if c.isdigit())
+        query_digits = "".join(c for c in query if c.isdigit())
 
         for row in rows:
             if not row:
                 continue
 
             # Match user_id
-            user_id_str = str(row[0]) if row else ''
+            user_id_str = str(row[0]) if row else ""
             if query_digits and query_digits in user_id_str:
-                lead = dict(zip(self.LEADS_COLUMNS, row + [''] * (len(self.LEADS_COLUMNS) - len(row)), strict=False))
+                lead = dict(
+                    zip(
+                        self.LEADS_COLUMNS,
+                        row + [""] * (len(self.LEADS_COLUMNS) - len(row)),
+                        strict=False,
+                    )
+                )
                 results.append(lead)
                 continue
 
             # Match phone
-            phone = row[10] if len(row) > 10 else ''
-            phone_digits = ''.join(c for c in phone if c.isdigit())
+            phone = row[10] if len(row) > 10 else ""
+            phone_digits = "".join(c for c in phone if c.isdigit())
             if query_digits and query_digits in phone_digits:
-                lead = dict(zip(self.LEADS_COLUMNS, row + [''] * (len(self.LEADS_COLUMNS) - len(row)), strict=False))
+                lead = dict(
+                    zip(
+                        self.LEADS_COLUMNS,
+                        row + [""] * (len(self.LEADS_COLUMNS) - len(row)),
+                        strict=False,
+                    )
+                )
                 results.append(lead)
                 continue
 
             # Match username
-            username = row[1] if len(row) > 1 else ''
+            username = row[1] if len(row) > 1 else ""
             if query_lower and query_lower in username.lower():
-                lead = dict(zip(self.LEADS_COLUMNS, row + [''] * (len(self.LEADS_COLUMNS) - len(row)), strict=False))
+                lead = dict(
+                    zip(
+                        self.LEADS_COLUMNS,
+                        row + [""] * (len(self.LEADS_COLUMNS) - len(row)),
+                        strict=False,
+                    )
+                )
                 results.append(lead)
 
         return results[:20]  # Limit results
@@ -558,7 +594,7 @@ class SheetsClient:
         Update or append daily metrics to MetricsDaily sheet.
         metrics: {date, visitors, engaged, cart, checkout, orders, orders_total, avg_check}
         """
-        target_date = metrics.get('date', datetime.now().strftime('%Y-%m-%d'))
+        target_date = metrics.get("date", datetime.now().strftime("%Y-%m-%d"))
 
         try:
             rows = await self.get_values("MetricsDaily!A2:H1000")
@@ -573,17 +609,17 @@ class SheetsClient:
                 break
 
         avg_check = 0
-        if metrics.get('orders', 0) > 0:
-            avg_check = metrics.get('orders_total', 0) // metrics['orders']
+        if metrics.get("orders", 0) > 0:
+            avg_check = metrics.get("orders_total", 0) // metrics["orders"]
 
         new_row = [
             target_date,
-            metrics.get('visitors', 0),
-            metrics.get('engaged', 0),
-            metrics.get('cart', 0),
-            metrics.get('checkout', 0),
-            metrics.get('orders', 0),
-            metrics.get('orders_total', 0),
+            metrics.get("visitors", 0),
+            metrics.get("engaged", 0),
+            metrics.get("cart", 0),
+            metrics.get("checkout", 0),
+            metrics.get("orders", 0),
+            metrics.get("orders_total", 0),
             avg_check,
         ]
 

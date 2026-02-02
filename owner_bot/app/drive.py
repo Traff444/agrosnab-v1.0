@@ -162,6 +162,7 @@ class DriveClient:
         except Exception as e:
             logger.error("photo_delete_failed", extra={"file_id": file_id, "error": str(e)})
             from app.monitoring import capture_exception
+
             capture_exception(e, {"method": "delete_photo", "file_id": file_id})
             return False
 

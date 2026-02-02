@@ -132,9 +132,9 @@ def register_ai_handlers(
             if await cart_store.has_user_consent(m.from_user.id):
                 await cart_store.log_crm_message(
                     m.from_user.id,
-                    direction='in',
+                    direction="in",
                     text=m.text or "",
-                    message_type='text',
+                    message_type="text",
                 )
         except Exception as e:
             logger.warning("crm_message_log_failed", extra={"error": str(e)})
@@ -159,9 +159,9 @@ def register_ai_handlers(
                 if await cart_store.has_user_consent(m.from_user.id):
                     await cart_store.log_crm_message(
                         m.from_user.id,
-                        direction='out',
+                        direction="out",
                         text=response_text,
-                        message_type='ai_response',
+                        message_type="ai_response",
                     )
             except Exception as e:
                 logger.warning("crm_outgoing_log_failed", extra={"error": str(e)})

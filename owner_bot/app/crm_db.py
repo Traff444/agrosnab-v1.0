@@ -104,7 +104,7 @@ async def get_user_events(
         async with aiosqlite.connect(DB_PATH) as db:
             db.row_factory = aiosqlite.Row
             if event_types:
-                placeholders = ','.join('?' * len(event_types))
+                placeholders = ",".join("?" * len(event_types))
                 cur = await db.execute(
                     f"""
                     SELECT id, event_type, payload_json, created_at
@@ -148,9 +148,9 @@ async def format_messages_for_display(user_id: int, limit: int = 20) -> str:
 
     lines = []
     for msg in messages:
-        direction = "👤" if msg['direction'] == 'in' else "🤖"
-        text = msg['text'][:100] + "..." if len(msg['text']) > 100 else msg['text']
-        ts = msg['created_at'][:16] if msg['created_at'] else ""
+        direction = "👤" if msg["direction"] == "in" else "🤖"
+        text = msg["text"][:100] + "..." if len(msg["text"]) > 100 else msg["text"]
+        ts = msg["created_at"][:16] if msg["created_at"] else ""
         lines.append(f"{direction} {ts}\n{text}")
 
     return "\n\n".join(lines)
@@ -199,8 +199,8 @@ async def generate_ai_summary(
     # Format conversation for AI
     conversation_lines = []
     for msg in messages:
-        role = "Клиент" if msg['direction'] == 'in' else "AI-продавец"
-        text = msg['text'][:500]  # Truncate long messages
+        role = "Клиент" if msg["direction"] == "in" else "AI-продавец"
+        text = msg["text"][:500]  # Truncate long messages
         conversation_lines.append(f"{role}: {text}")
 
     conversation_text = "\n".join(conversation_lines)
@@ -215,7 +215,10 @@ async def generate_ai_summary(
             model=model,
             messages=[
                 {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
-                {"role": "user", "content": f"Переписка клиента #{user_id}:\n\n{conversation_text}"},
+                {
+                    "role": "user",
+                    "content": f"Переписка клиента #{user_id}:\n\n{conversation_text}",
+                },
             ],
             max_tokens=500,
             temperature=0.3,

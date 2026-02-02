@@ -111,7 +111,8 @@ def product_actions_keyboard(product: Product) -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    text="🧮 Корректировка", callback_data=f"product_correction_{product.row_number}"
+                    text="🧮 Корректировка",
+                    callback_data=f"product_correction_{product.row_number}",
                 ),
                 InlineKeyboardButton(
                     text="📷 Фото", callback_data=f"product_photo_{product.row_number}"
@@ -176,7 +177,9 @@ def correction_reason_keyboard() -> InlineKeyboardMarkup:
                 ),
             ],
             [
-                InlineKeyboardButton(text="🔄 Пересорт", callback_data="correction_reason_пересорт"),
+                InlineKeyboardButton(
+                    text="🔄 Пересорт", callback_data="correction_reason_пересорт"
+                ),
                 InlineKeyboardButton(
                     text="⚠️ Ошибки учёта", callback_data="correction_reason_ошибки_учёта"
                 ),
@@ -288,9 +291,7 @@ def pagination_keyboard(
             InlineKeyboardButton(text="◀️", callback_data=f"{prefix}_page_{current_page - 1}")
         )
 
-    buttons.append(
-        InlineKeyboardButton(text=f"{current_page}/{total_pages}", callback_data="noop")
-    )
+    buttons.append(InlineKeyboardButton(text=f"{current_page}/{total_pages}", callback_data="noop"))
 
     if current_page < total_pages:
         buttons.append(
@@ -339,19 +340,20 @@ def stock_list_keyboard(
     for p in products:
         status = "✅" if p.active else "❌"
         label = f"{status} {p.name[:25]} ({p.stock} шт.)"
-        buttons.append([
-            InlineKeyboardButton(
-                text=label,
-                callback_data=f"stock_select_{p.row_number}"
-            )
-        ])
+        buttons.append(
+            [InlineKeyboardButton(text=label, callback_data=f"stock_select_{p.row_number}")]
+        )
 
     nav_row = []
     if current_page > 1:
-        nav_row.append(InlineKeyboardButton(text="◀️", callback_data=f"stock_page_{current_page - 1}"))
+        nav_row.append(
+            InlineKeyboardButton(text="◀️", callback_data=f"stock_page_{current_page - 1}")
+        )
     nav_row.append(InlineKeyboardButton(text=f"{current_page}/{total_pages}", callback_data="noop"))
     if current_page < total_pages:
-        nav_row.append(InlineKeyboardButton(text="▶️", callback_data=f"stock_page_{current_page + 1}"))
+        nav_row.append(
+            InlineKeyboardButton(text="▶️", callback_data=f"stock_page_{current_page + 1}")
+        )
     buttons.append(nav_row)
 
     buttons.append([InlineKeyboardButton(text="❌ Закрыть", callback_data="stock_close")])

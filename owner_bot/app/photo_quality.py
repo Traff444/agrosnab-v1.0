@@ -67,12 +67,16 @@ def analyze_photo(file_path: str | Path) -> PhotoQualityResult:
     # Check dimensions
     min_dimension = min(original_width, original_height)
     if min_dimension < settings.photo_min_size:
-        warnings.append(f"Размер {min_dimension}px меньше рекомендуемого {settings.photo_min_size}px")
+        warnings.append(
+            f"Размер {min_dimension}px меньше рекомендуемого {settings.photo_min_size}px"
+        )
         status = PhotoStatus.WARNING
 
     # Check sharpness
     if sharpness < settings.photo_sharpness_threshold:
-        warnings.append(f"Низкая резкость ({sharpness:.0f} < {settings.photo_sharpness_threshold:.0f})")
+        warnings.append(
+            f"Низкая резкость ({sharpness:.0f} < {settings.photo_sharpness_threshold:.0f})"
+        )
         status = PhotoStatus.WARNING
 
     # Check brightness

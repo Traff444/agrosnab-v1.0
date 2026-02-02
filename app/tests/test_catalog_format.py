@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.utils import (
     format_price,
     format_product_button,

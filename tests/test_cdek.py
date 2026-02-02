@@ -52,4 +52,3 @@ def test_cdek_pvz_full_display_format():
     assert "Тверская 1" in text
     assert "🕐" in text
     assert "🚇" in text
-

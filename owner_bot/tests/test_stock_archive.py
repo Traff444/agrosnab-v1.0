@@ -67,22 +67,16 @@ class TestApplyArchiveZeroOut:
         """Archive with stock > 0 should log to 'Списание' with reason archive:zero_out."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product_with_stock
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
-                ), patch.object(
-                    client, "update_product_active", new_callable=AsyncMock
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(client, "_increment_total_column", new_callable=AsyncMock),
+                    patch.object(client, "update_product_active", new_callable=AsyncMock),
                 ):
                     result = await client.apply_archive_zero_out(
                         row_number=5,
@@ -111,23 +105,19 @@ class TestApplyArchiveZeroOut:
         """Archive should deactivate product after zeroing stock."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product_with_stock
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
-                ), patch.object(
-                    client, "update_product_active", new_callable=AsyncMock
-                ) as mock_deactivate:
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(client, "_increment_total_column", new_callable=AsyncMock),
+                    patch.object(
+                        client, "update_product_active", new_callable=AsyncMock
+                    ) as mock_deactivate,
+                ):
                     await client.apply_archive_zero_out(
                         row_number=5,
                         actor_id=123456,
@@ -146,15 +136,12 @@ class TestApplyArchiveZeroOut:
         """Archive with stock == 0 should not log writeoff."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product_zero_stock
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append, patch.object(
-                client, "update_product_active", new_callable=AsyncMock
+            with (
+                patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append,
+                patch.object(client, "update_product_active", new_callable=AsyncMock),
             ):
                 result = await client.apply_archive_zero_out(
                     row_number=5,
@@ -176,9 +163,7 @@ class TestApplyArchiveZeroOut:
         """Archive with stock == 0 should still deactivate product."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product_zero_stock
 
             with patch.object(
@@ -196,15 +181,11 @@ class TestApplyArchiveZeroOut:
                 assert call_kwargs["active"] is False
 
     @pytest.mark.asyncio
-    async def test_archive_returns_error_when_product_not_found(
-        self, sheets_client_with_mocks
-    ):
+    async def test_archive_returns_error_when_product_not_found(self, sheets_client_with_mocks):
         """Archive should return error if product not found."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = None
 
             result = await client.apply_archive_zero_out(
@@ -223,22 +204,18 @@ class TestApplyArchiveZeroOut:
         """Archive with stock should update Списано_всего."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product_with_stock
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
-                ) as mock_increment, patch.object(
-                    client, "update_product_active", new_callable=AsyncMock
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(
+                        client, "_increment_total_column", new_callable=AsyncMock
+                    ) as mock_increment,
+                    patch.object(client, "update_product_active", new_callable=AsyncMock),
                 ):
                     await client.apply_archive_zero_out(
                         row_number=5,
@@ -247,9 +224,7 @@ class TestApplyArchiveZeroOut:
                     )
 
                     # Verify increment was called with full stock amount
-                    mock_increment.assert_called_once_with(
-                        5, "Списано_всего", 15
-                    )
+                    mock_increment.assert_called_once_with(5, "Списано_всего", 15)
 
     @pytest.mark.asyncio
     async def test_archive_fails_if_log_fails(
@@ -258,14 +233,10 @@ class TestApplyArchiveZeroOut:
         """Archive should fail if log entry fails."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product_with_stock
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = False  # Log failed
 
                 result = await client.apply_archive_zero_out(
@@ -293,9 +264,7 @@ class TestSimpleArchive:
         client = sheets_client_with_mocks
 
         # Simulate simple archive by calling update_product_active directly
-        with patch.object(
-            client.service.spreadsheets().values(), "batchUpdate"
-        ) as mock_batch:
+        with patch.object(client.service.spreadsheets().values(), "batchUpdate") as mock_batch:
             mock_batch.return_value.execute.return_value = {}
 
             # This simulates what happens in the handler for simple archive
@@ -316,12 +285,8 @@ class TestSimpleArchive:
         """Simple archive should not create any log entries."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "append_log_entry", new_callable=AsyncMock
-        ) as mock_append:
-            with patch.object(
-                client.service.spreadsheets().values(), "batchUpdate"
-            ) as mock_batch:
+        with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
+            with patch.object(client.service.spreadsheets().values(), "batchUpdate") as mock_batch:
                 mock_batch.return_value.execute.return_value = {}
 
                 # Simple archive only calls update_product_active

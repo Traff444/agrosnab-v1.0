@@ -132,7 +132,9 @@ def register_cart_handlers(
             if cfg.auto_write_spisanie:
                 await retry_async(sheets_client.append_spisanie_rows, spisanie_rows)
                 # Update stock in Склад sheet (now async with batch update)
-                await retry_async(sheets_client.decrease_stock, [(sku, qty) for sku, qty in cart_items])
+                await retry_async(
+                    sheets_client.decrease_stock, [(sku, qty) for sku, qty in cart_items]
+                )
                 # Invalidate cache after stock update
                 product_service.invalidate_cache()
 
@@ -140,22 +142,24 @@ def register_cart_handlers(
             await cart_store.mark_checkout_complete(user_id, order_id)
 
             # CRM: Log order_created event
-            await cart_store.log_crm_event(user_id, 'order_created', {
-                'order_id': order_id,
-                'total': total,
-                'items_count': len(cart_items),
-                'delivery': delivery,
-            })
+            await cart_store.log_crm_event(
+                user_id,
+                "order_created",
+                {
+                    "order_id": order_id,
+                    "total": total,
+                    "items_count": len(cart_items),
+                    "delivery": delivery,
+                },
+            )
 
             # CRM: Update lead stage to customer or repeat
             orders_count = await cart_store.get_user_orders_count(user_id)
-            stage = 'repeat' if orders_count >= 2 else 'customer'
+            stage = "repeat" if orders_count >= 2 else "customer"
 
             # Calculate lifetime value
-            events = await cart_store.get_user_events(user_id, event_types=['order_created'])
-            lifetime_value = sum(
-                (e.get('payload') or {}).get('total', 0) for e in events
-            )
+            events = await cart_store.get_user_events(user_id, event_types=["order_created"])
+            lifetime_value = sum((e.get("payload") or {}).get("total", 0) for e in events)
 
             try:
                 await sheets_client.upsert_lead(
@@ -167,7 +171,9 @@ def register_cart_handlers(
                     last_order_id=order_id,
                 )
             except Exception as crm_error:
-                logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(crm_error)})
+                logger.warning(
+                    "lead_update_failed", extra={"user_id": user_id, "error": str(crm_error)}
+                )
 
         except Exception as e:
             logger.error("Checkout failed for user %s: %s", user_id, e)
@@ -232,14 +238,18 @@ def register_cart_handlers(
 
         if success:
             # CRM: Log add_to_cart event
-            await cart_store.log_crm_event(user_id, 'add_to_cart', {
-                'sku': sku,
-                'qty': qty,
-            })
+            await cart_store.log_crm_event(
+                user_id,
+                "add_to_cart",
+                {
+                    "sku": sku,
+                    "qty": qty,
+                },
+            )
 
             # CRM: Update lead stage to cart
             try:
-                await sheets_client.upsert_lead(user_id, stage='cart')
+                await sheets_client.upsert_lead(user_id, stage="cart")
             except Exception as e:
                 logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
@@ -342,13 +352,17 @@ def register_cart_handlers(
         await state.update_data(phone=phone)
 
         # CRM: Log checkout_started event
-        await cart_store.log_crm_event(user_id, 'checkout_started', {
-            'phone': phone[:4] + '***' + phone[-2:] if len(phone) > 6 else '***',  # masked
-        })
+        await cart_store.log_crm_event(
+            user_id,
+            "checkout_started",
+            {
+                "phone": phone[:4] + "***" + phone[-2:] if len(phone) > 6 else "***",  # masked
+            },
+        )
 
         # CRM: Update lead stage to checkout and save phone
         try:
-            await sheets_client.upsert_lead(user_id, stage='checkout', phone=phone)
+            await sheets_client.upsert_lead(user_id, stage="checkout", phone=phone)
         except Exception as e:
             logger.warning(f"Failed to update lead {user_id}: {e}")
         cdek_client = get_cdek_client()
@@ -393,7 +407,9 @@ def register_cart_handlers(
 
         cities = await cdek_client.search_cities(q, limit=10)
         if not cities:
-            await m.answer("Не нашёл город. Попробуйте ещё раз (пример: Москва) или напишите «вручную».")
+            await m.answer(
+                "Не нашёл город. Попробуйте ещё раз (пример: Москва) или напишите «вручную»."
+            )
             return
 
         city_items = [(c.code, c.display_name()) for c in cities if c.code]
@@ -435,7 +451,9 @@ def register_cart_handlers(
 
         pvz = await cdek_client.get_pvz_list(city_code, limit=50)
         if not pvz:
-            await cb.message.answer("В этом городе не нашёл ПВЗ. Попробуйте другой город или «вручную».")
+            await cb.message.answer(
+                "В этом городе не нашёл ПВЗ. Попробуйте другой город или «вручную»."
+            )
             await cb.answer()
             return
 
@@ -454,9 +472,13 @@ def register_cart_handlers(
             }
             pvz_items.append((p.code, p.display_name()))
 
-        await state.update_data(cdek_city_code=city_code, cdek_pvz_map=pvz_map, cdek_pvz_items=pvz_items)
+        await state.update_data(
+            cdek_city_code=city_code, cdek_pvz_map=pvz_map, cdek_pvz_items=pvz_items
+        )
         await state.set_state(CheckoutState.pvz_select)
-        await cb.message.answer("Выберите ПВЗ:", reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=0))
+        await cb.message.answer(
+            "Выберите ПВЗ:", reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=0)
+        )
         await cb.answer()
 
     @dp.callback_query(F.data.startswith("cdek:pvz_page:"))
@@ -481,10 +503,15 @@ def register_cart_handlers(
             return
 
         try:
-            await cb.message.edit_reply_markup(reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=page))
+            await cb.message.edit_reply_markup(
+                reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=page)
+            )
         except TelegramBadRequest as e:
             logger.debug("Cannot edit PVZ markup: %s", e)
-            await cb.message.answer("Выберите ПВЗ:", reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=page))
+            await cb.message.answer(
+                "Выберите ПВЗ:",
+                reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=page),
+            )
         await cb.answer()
 
     @dp.callback_query(F.data.startswith("cdek:pvz:"))
@@ -508,7 +535,9 @@ def register_cart_handlers(
             work_time=pvz_data.get("work_time", ""),
             nearest_metro=pvz_data.get("nearest_metro"),
         )
-        await cb.message.answer(f"Проверьте ПВЗ:\n\n{pvz_obj.full_display()}", reply_markup=delivery_confirm_kb())
+        await cb.message.answer(
+            f"Проверьте ПВЗ:\n\n{pvz_obj.full_display()}", reply_markup=delivery_confirm_kb()
+        )
         await cb.answer()
 
     async def show_order_confirmation(

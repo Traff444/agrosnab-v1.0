@@ -56,20 +56,21 @@ async def _safe_edit_reply_markup(
 
 # Stage emoji mapping
 STAGE_EMOJI = {
-    'new': '🆕',
-    'engaged': '👀',
-    'cart': '🛒',
-    'checkout': '📝',
-    'customer': '✅',
-    'repeat': '🌟',
+    "new": "🆕",
+    "engaged": "👀",
+    "cart": "🛒",
+    "checkout": "📝",
+    "customer": "✅",
+    "repeat": "🌟",
 }
 
 # Tag options for leads
-TAG_OPTIONS = ['vip', 'problem', 'discount', 'cdek', 'pickup', 'wholesale']
+TAG_OPTIONS = ["vip", "problem", "discount", "cdek", "pickup", "wholesale"]
 
 
 class CRMState(StatesGroup):
     """FSM states for CRM operations."""
+
     searching = State()
     adding_note = State()
     editing_tags = State()
@@ -88,7 +89,9 @@ def crm_menu_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-def lead_card_keyboard(user_id: int, has_prev: bool = False, has_next: bool = False) -> InlineKeyboardMarkup:
+def lead_card_keyboard(
+    user_id: int, has_prev: bool = False, has_next: bool = False
+) -> InlineKeyboardMarkup:
     """Keyboard for lead card."""
     builder = InlineKeyboardBuilder()
 
@@ -100,9 +103,13 @@ def lead_card_keyboard(user_id: int, has_prev: bool = False, has_next: bool = Fa
     # Navigation
     nav_row = []
     if has_prev:
-        nav_row.append(InlineKeyboardButton(text="◀️ Пред.", callback_data=f"crm:lead_prev:{user_id}"))
+        nav_row.append(
+            InlineKeyboardButton(text="◀️ Пред.", callback_data=f"crm:lead_prev:{user_id}")
+        )
     if has_next:
-        nav_row.append(InlineKeyboardButton(text="След. ▶️", callback_data=f"crm:lead_next:{user_id}"))
+        nav_row.append(
+            InlineKeyboardButton(text="След. ▶️", callback_data=f"crm:lead_next:{user_id}")
+        )
 
     builder.adjust(3)  # 3 buttons per row
 
@@ -125,32 +132,32 @@ def tags_keyboard(user_id: int, current_tags: list[str]) -> InlineKeyboardMarkup
     builder.adjust(2)
 
     kb = builder.as_markup()
-    kb.inline_keyboard.append([
-        InlineKeyboardButton(text="💾 Готово", callback_data=f"crm:lead:{user_id}")
-    ])
+    kb.inline_keyboard.append(
+        [InlineKeyboardButton(text="💾 Готово", callback_data=f"crm:lead:{user_id}")]
+    )
 
     return kb
 
 
 def format_lead_card(lead: dict) -> str:
     """Format lead data as a Telegram message."""
-    stage = lead.get('stage', 'new')
-    stage_emoji = STAGE_EMOJI.get(stage, '❓')
+    stage = lead.get("stage", "new")
+    stage_emoji = STAGE_EMOJI.get(stage, "❓")
 
-    user_id = lead.get('user_id', '?')
-    username = lead.get('username', '')
-    first_seen = lead.get('first_seen_at', '')[:10] if lead.get('first_seen_at') else '—'
-    last_seen = lead.get('last_seen_at', '')[:16] if lead.get('last_seen_at') else '—'
+    user_id = lead.get("user_id", "?")
+    username = lead.get("username", "")
+    first_seen = lead.get("first_seen_at", "")[:10] if lead.get("first_seen_at") else "—"
+    last_seen = lead.get("last_seen_at", "")[:16] if lead.get("last_seen_at") else "—"
 
-    orders_count = int(lead.get('orders_count') or 0)
-    lifetime_value = int(lead.get('lifetime_value') or 0)
-    last_order = lead.get('last_order_id', '') or '—'
+    orders_count = int(lead.get("orders_count") or 0)
+    lifetime_value = int(lead.get("lifetime_value") or 0)
+    last_order = lead.get("last_order_id", "") or "—"
 
-    phone = lead.get('phone', '')
-    phone_masked = phone[:4] + '***' + phone[-2:] if phone and len(phone) > 6 else phone or '—'
+    phone = lead.get("phone", "")
+    phone_masked = phone[:4] + "***" + phone[-2:] if phone and len(phone) > 6 else phone or "—"
 
-    tags = lead.get('tags', '') or '—'
-    notes = lead.get('notes', '') or '—'
+    tags = lead.get("tags", "") or "—"
+    notes = lead.get("notes", "") or "—"
 
     return (
         f"👤 *Клиент #{user_id}*\n"
@@ -168,16 +175,16 @@ def format_lead_card(lead: dict) -> str:
 
 def format_funnel(stats: dict) -> str:
     """Format funnel statistics."""
-    total = stats.get('total', 0)
+    total = stats.get("total", 0)
     if total == 0:
         return "📊 *Воронка пуста*\n\nНет данных о лидах."
 
-    new = stats.get('new', 0)
-    engaged = stats.get('engaged', 0)
-    cart = stats.get('cart', 0)
-    checkout = stats.get('checkout', 0)
-    customer = stats.get('customer', 0)
-    repeat = stats.get('repeat', 0)
+    new = stats.get("new", 0)
+    engaged = stats.get("engaged", 0)
+    cart = stats.get("cart", 0)
+    checkout = stats.get("checkout", 0)
+    customer = stats.get("customer", 0)
+    repeat = stats.get("repeat", 0)
 
     # Calculate percentages
     def pct(n):
@@ -209,13 +216,13 @@ def format_funnel(stats: dict) -> str:
 # Handlers
 # =============================================================================
 
+
 @router.message(F.text == "📊 CRM")
 async def cmd_crm(message: Message, state: FSMContext) -> None:
     """CRM main menu."""
     await state.clear()  # Clear FSM state to avoid conflicts with intake flow
     await message.answer(
-        "📊 *CRM — Управление клиентами*\n\n"
-        "Выберите действие:",
+        "📊 *CRM — Управление клиентами*\n\nВыберите действие:",
         reply_markup=crm_menu_keyboard(),
     )
 
@@ -259,8 +266,7 @@ async def crm_menu(cb: CallbackQuery) -> None:
     """Return to CRM menu."""
     await _safe_edit_text(
         cb,
-        "📊 *CRM — Управление клиентами*\n\n"
-        "Выберите действие:",
+        "📊 *CRM — Управление клиентами*\n\nВыберите действие:",
         reply_markup=crm_menu_keyboard(),
     )
     await cb.answer()
@@ -280,12 +286,9 @@ async def crm_leads(cb: CallbackQuery) -> None:
     if not leads:
         await _safe_edit_text(
             cb,
-            "👥 *Последние лиды*\n\n"
-            "Список пуст. Пока нет данных о клиентах.",
+            "👥 *Последние лиды*\n\nСписок пуст. Пока нет данных о клиентах.",
             reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="🔙 Назад", callback_data="crm:menu")]
-                ]
+                inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data="crm:menu")]]
             ),
         )
         return
@@ -294,11 +297,11 @@ async def crm_leads(cb: CallbackQuery) -> None:
     builder = InlineKeyboardBuilder()
 
     for lead in leads[:10]:
-        user_id = lead.get('user_id', '?')
-        username = lead.get('username', '')[:15] or f"#{user_id}"
-        stage = lead.get('stage', 'new')
-        stage_emoji = STAGE_EMOJI.get(stage, '❓')
-        orders = int(lead.get('orders_count') or 0)
+        user_id = lead.get("user_id", "?")
+        username = lead.get("username", "")[:15] or f"#{user_id}"
+        stage = lead.get("stage", "new")
+        stage_emoji = STAGE_EMOJI.get(stage, "❓")
+        orders = int(lead.get("orders_count") or 0)
 
         label = f"{stage_emoji} {username}"
         if orders > 0:
@@ -364,7 +367,11 @@ async def crm_message_history(cb: CallbackQuery) -> None:
             "_Сообщения сохраняются только при наличии согласия клиента._",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="👤 К карточке", callback_data=f"crm:lead:{user_id}")],
+                    [
+                        InlineKeyboardButton(
+                            text="👤 К карточке", callback_data=f"crm:lead:{user_id}"
+                        )
+                    ],
                     [InlineKeyboardButton(text="🔙 CRM меню", callback_data="crm:menu")],
                 ]
             ),
@@ -374,11 +381,7 @@ async def crm_message_history(cb: CallbackQuery) -> None:
     # Get formatted messages
     history_text = await format_messages_for_display(user_id, limit=15)
 
-    text = (
-        f"📜 *История сообщений #{user_id}*\n"
-        f"_Всего сообщений: {msg_count}_\n\n"
-        f"{history_text}"
-    )
+    text = f"📜 *История сообщений #{user_id}*\n_Всего сообщений: {msg_count}_\n\n{history_text}"
 
     # Truncate if too long
     if len(text) > 4000:
@@ -397,10 +400,12 @@ async def crm_message_history(cb: CallbackQuery) -> None:
             [InlineKeyboardButton(text="🧠 AI-сводка", callback_data=f"crm:summary:{user_id}")]
         )
 
-    keyboard_rows.extend([
-        [InlineKeyboardButton(text="👤 К карточке", callback_data=f"crm:lead:{user_id}")],
-        [InlineKeyboardButton(text="🔙 CRM меню", callback_data="crm:menu")],
-    ])
+    keyboard_rows.extend(
+        [
+            [InlineKeyboardButton(text="👤 К карточке", callback_data=f"crm:lead:{user_id}")],
+            [InlineKeyboardButton(text="🔙 CRM меню", callback_data="crm:menu")],
+        ]
+    )
 
     await _safe_edit_text(
         cb,
@@ -432,10 +437,7 @@ async def crm_ai_summary(cb: CallbackQuery) -> None:
         model=settings.openai_model,
     )
 
-    text = (
-        f"🧠 *AI-сводка клиента #{user_id}*\n\n"
-        f"{summary}"
-    )
+    text = f"🧠 *AI-сводка клиента #{user_id}*\n\n{summary}"
 
     await _safe_edit_text(
         cb,
@@ -457,8 +459,7 @@ async def crm_search_start(cb: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(CRMState.searching)
     await _safe_edit_text(
         cb,
-        "🔍 *Поиск клиента*\n\n"
-        "Введите user\\_id, телефон или имя:",
+        "🔍 *Поиск клиента*\n\nВведите user\\_id, телефон или имя:",
     )
     await cb.answer()
 
@@ -492,7 +493,7 @@ async def crm_search_query(message: Message, state: FSMContext) -> None:
     if len(results) == 1:
         # Show single result directly
         lead = results[0]
-        user_id = lead.get('user_id')
+        user_id = lead.get("user_id")
         text = format_lead_card(lead)
         kb = lead_card_keyboard(int(user_id) if user_id else 0)
         await message.answer(text, reply_markup=kb)
@@ -502,10 +503,10 @@ async def crm_search_query(message: Message, state: FSMContext) -> None:
         builder = InlineKeyboardBuilder()
 
         for lead in results[:10]:
-            user_id = lead.get('user_id', '?')
-            username = lead.get('username', '')[:15] or f"#{user_id}"
-            stage = lead.get('stage', 'new')
-            stage_emoji = STAGE_EMOJI.get(stage, '❓')
+            user_id = lead.get("user_id", "?")
+            username = lead.get("username", "")[:15] or f"#{user_id}"
+            stage = lead.get("stage", "new")
+            stage_emoji = STAGE_EMOJI.get(stage, "❓")
 
             builder.button(text=f"{stage_emoji} {username}", callback_data=f"crm:lead:{user_id}")
 
@@ -527,10 +528,7 @@ async def crm_add_note_start(cb: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(CRMState.adding_note)
     await state.update_data(target_user_id=user_id)
 
-    await cb.message.answer(
-        f"📝 *Заметка для клиента #{user_id}*\n\n"
-        "Введите текст заметки:"
-    )
+    await cb.message.answer(f"📝 *Заметка для клиента #{user_id}*\n\nВведите текст заметки:")
     await cb.answer()
 
 
@@ -538,7 +536,7 @@ async def crm_add_note_start(cb: CallbackQuery, state: FSMContext) -> None:
 async def crm_add_note_save(message: Message, state: FSMContext) -> None:
     """Save note to lead."""
     data = await state.get_data()
-    user_id = data.get('target_user_id')
+    user_id = data.get("target_user_id")
     await state.clear()
 
     if not user_id:
@@ -557,8 +555,8 @@ async def crm_add_note_save(message: Message, state: FSMContext) -> None:
     try:
         # Get existing notes and append
         lead = await sheets_client.get_lead_by_user_id(user_id)
-        existing_notes = lead.get('notes', '') if lead else ''
-        if existing_notes and existing_notes != '—':
+        existing_notes = lead.get("notes", "") if lead else ""
+        if existing_notes and existing_notes != "—":
             new_notes = f"{existing_notes}; {note_with_ts}"
         else:
             new_notes = note_with_ts
@@ -568,7 +566,11 @@ async def crm_add_note_save(message: Message, state: FSMContext) -> None:
             f"✅ Заметка сохранена для клиента #{user_id}",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="👤 К карточке", callback_data=f"crm:lead:{user_id}")],
+                    [
+                        InlineKeyboardButton(
+                            text="👤 К карточке", callback_data=f"crm:lead:{user_id}"
+                        )
+                    ],
                     [InlineKeyboardButton(text="🔙 CRM меню", callback_data="crm:menu")],
                 ]
             ),
@@ -588,13 +590,12 @@ async def crm_edit_tags(cb: CallbackQuery) -> None:
         return
 
     lead = await sheets_client.get_lead_by_user_id(user_id)
-    current_tags_str = lead.get('tags', '') if lead else ''
-    current_tags = [t.strip() for t in current_tags_str.split(',') if t.strip()]
+    current_tags_str = lead.get("tags", "") if lead else ""
+    current_tags = [t.strip() for t in current_tags_str.split(",") if t.strip()]
 
     await _safe_edit_text(
         cb,
-        f"🏷 *Теги для клиента #{user_id}*\n\n"
-        "Нажмите на тег чтобы добавить/убрать:",
+        f"🏷 *Теги для клиента #{user_id}*\n\nНажмите на тег чтобы добавить/убрать:",
         reply_markup=tags_keyboard(user_id, current_tags),
     )
     await cb.answer()
@@ -616,8 +617,8 @@ async def crm_toggle_tag(cb: CallbackQuery) -> None:
         return
 
     lead = await sheets_client.get_lead_by_user_id(user_id)
-    current_tags_str = lead.get('tags', '') if lead else ''
-    current_tags = [t.strip() for t in current_tags_str.split(',') if t.strip()]
+    current_tags_str = lead.get("tags", "") if lead else ""
+    current_tags = [t.strip() for t in current_tags_str.split(",") if t.strip()]
 
     # Toggle tag
     if tag in current_tags:
@@ -626,7 +627,7 @@ async def crm_toggle_tag(cb: CallbackQuery) -> None:
         current_tags.append(tag)
 
     # Save
-    new_tags_str = ', '.join(current_tags)
+    new_tags_str = ", ".join(current_tags)
     try:
         await sheets_client.update_lead_tags(user_id, new_tags_str)
     except Exception as e:
@@ -653,20 +654,18 @@ async def crm_daily_report(cb: CallbackQuery) -> None:
             cb,
             "❌ Не удалось загрузить отчёт",
             reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="🔙 Назад", callback_data="crm:menu")]
-                ]
+                inline_keyboard=[[InlineKeyboardButton(text="🔙 Назад", callback_data="crm:menu")]]
             ),
         )
         return
 
     today = datetime.now().strftime("%d.%m.%Y")
-    orders_count = orders.get('orders_count', 0)
-    orders_total = orders.get('orders_total', 0)
+    orders_count = orders.get("orders_count", 0)
+    orders_total = orders.get("orders_total", 0)
     avg_check = orders_total // orders_count if orders_count > 0 else 0
 
-    total_leads = stats.get('total', 0)
-    customers = stats.get('customer', 0) + stats.get('repeat', 0)
+    total_leads = stats.get("total", 0)
+    customers = stats.get("customer", 0) + stats.get("repeat", 0)
     conversion = f"{customers / total_leads * 100:.1f}%" if total_leads > 0 else "—"
 
     text = (

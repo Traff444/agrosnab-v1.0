@@ -20,7 +20,7 @@ from ..keyboards import (
 )
 from ..services import ProductService
 from ..sheets import SheetsClient
-from .common import format_product, format_product_card
+from .common import format_product
 
 logger = logging.getLogger(__name__)
 
@@ -41,14 +41,18 @@ def register_catalog_handlers(
         user_id = m.from_user.id
 
         # CRM: Log catalog view event
-        await cart_store.log_crm_event(user_id, 'catalog_view', {
-            'category': 'all',
-            'source': 'text_button',
-        })
+        await cart_store.log_crm_event(
+            user_id,
+            "catalog_view",
+            {
+                "category": "all",
+                "source": "text_button",
+            },
+        )
 
         # CRM: Update lead stage to engaged
         try:
-            await sheets_client.upsert_lead(user_id, stage='engaged')
+            await sheets_client.upsert_lead(user_id, stage="engaged")
         except Exception as e:
             logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
@@ -74,14 +78,18 @@ def register_catalog_handlers(
         category = parts[2] if len(parts) > 2 else "all"
 
         # CRM: Log catalog navigation
-        await cart_store.log_crm_event(user_id, 'catalog_view', {
-            'category': category,
-            'page': page,
-        })
+        await cart_store.log_crm_event(
+            user_id,
+            "catalog_view",
+            {
+                "category": category,
+                "page": page,
+            },
+        )
 
         # CRM: Update lead stage to engaged
         try:
-            await sheets_client.upsert_lead(user_id, stage='engaged')
+            await sheets_client.upsert_lead(user_id, stage="engaged")
         except Exception as e:
             logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
@@ -161,14 +169,18 @@ def register_catalog_handlers(
         found = product_service.search(query)
 
         # CRM: Log search event
-        await cart_store.log_crm_event(user_id, 'search', {
-            'query': query,
-            'results_count': len(found),
-        })
+        await cart_store.log_crm_event(
+            user_id,
+            "search",
+            {
+                "query": query,
+                "results_count": len(found),
+            },
+        )
 
         # CRM: Update lead stage to engaged
         try:
-            await sheets_client.upsert_lead(user_id, stage='engaged')
+            await sheets_client.upsert_lead(user_id, stage="engaged")
         except Exception as e:
             logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
@@ -197,15 +209,19 @@ def register_catalog_handlers(
             return
 
         # CRM: Log product view event
-        await cart_store.log_crm_event(user_id, 'product_view', {
-            'sku': sku,
-            'name': product.get('name', ''),
-            'price': product.get('price_rub', 0),
-        })
+        await cart_store.log_crm_event(
+            user_id,
+            "product_view",
+            {
+                "sku": sku,
+                "name": product.get("name", ""),
+                "price": product.get("price_rub", 0),
+            },
+        )
 
         # CRM: Update lead stage to engaged
         try:
-            await sheets_client.upsert_lead(user_id, stage='engaged')
+            await sheets_client.upsert_lead(user_id, stage="engaged")
         except Exception as e:
             logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 

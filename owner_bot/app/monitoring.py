@@ -42,15 +42,19 @@ def capture_exception(error: Exception, context: dict | None = None) -> None:
                 for key, value in context.items():
                     scope.set_extra(key, value)
             sentry_sdk.capture_exception(error)
-    logger.error("error_captured", extra={"error_type": type(error).__name__, "error": str(error)}, exc_info=error)
+    logger.error(
+        "error_captured",
+        extra={"error_type": type(error).__name__, "error": str(error)},
+        exc_info=error,
+    )
 
 
 # Transient errors worth retrying (network issues, rate limits, server errors)
 RETRYABLE_EXCEPTIONS = (
-    HttpError,          # Google API errors (429, 500, 503)
-    ConnectionError,    # Network connection issues
-    TimeoutError,       # Request timeouts
-    OSError,            # Low-level network errors (includes ssl.SSLError)
+    HttpError,  # Google API errors (429, 500, 503)
+    ConnectionError,  # Network connection issues
+    TimeoutError,  # Request timeouts
+    OSError,  # Low-level network errors (includes ssl.SSLError)
 )
 
 # Retry decorator for Google API calls

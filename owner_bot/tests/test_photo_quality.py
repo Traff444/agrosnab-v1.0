@@ -1,6 +1,5 @@
 """Tests for photo quality analysis."""
 
-
 from app.models import PhotoStatus
 from app.photo_quality import analyze_photo, format_quality_report
 

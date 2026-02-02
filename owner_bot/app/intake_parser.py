@@ -37,7 +37,7 @@ def _extract_weight(text: str) -> tuple[int | None, str]:
         # Validate reasonable weight range (1g to 100kg)
         if 1 <= weight <= 100000:
             # Remove the weight token from text
-            text_without_weight = text[:match.start()] + text[match.end():]
+            text_without_weight = text[: match.start()] + text[match.end() :]
             text_without_weight = re.sub(r"\s+", " ", text_without_weight).strip()
             return weight, text_without_weight
     return None, text
@@ -185,7 +185,9 @@ def format_parsed_intake(parsed: ParsedIntake) -> str:
         lines.append(f"📊 **Количество:** {parsed.quantity} шт.")
 
     confidence_emoji = "✅" if parsed.confidence == IntakeConfidence.HIGH else "⚠️"
-    confidence_text = "высокая" if parsed.confidence == IntakeConfidence.HIGH else "требует уточнения"
+    confidence_text = (
+        "высокая" if parsed.confidence == IntakeConfidence.HIGH else "требует уточнения"
+    )
     lines.append(f"{confidence_emoji} **Уверенность:** {confidence_text}")
 
     return "\n".join(lines)

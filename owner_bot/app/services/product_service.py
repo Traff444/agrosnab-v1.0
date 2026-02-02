@@ -184,7 +184,9 @@ class ProductService:
 
         if show_service_fields:
             if product.last_intake_at:
-                lines.append(f"📥 Последний приход: {product.last_intake_at.strftime('%d.%m.%Y %H:%M')}")
+                lines.append(
+                    f"📥 Последний приход: {product.last_intake_at.strftime('%d.%m.%Y %H:%M')}"
+                )
             if product.last_intake_qty:
                 lines.append(f"   Количество: +{product.last_intake_qty}")
             if product.last_updated_by:
@@ -200,8 +202,7 @@ class ProductService:
         """Format stock change preview."""
         new_stock = product.stock + quantity_delta
         return (
-            f"📦 **{product.name}**\n"
-            f"Остаток: {product.stock} → **{new_stock}** (+{quantity_delta})"
+            f"📦 **{product.name}**\nОстаток: {product.stock} → **{new_stock}** (+{quantity_delta})"
         )
 
 

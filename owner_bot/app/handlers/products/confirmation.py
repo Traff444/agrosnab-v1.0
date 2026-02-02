@@ -234,9 +234,7 @@ async def _execute_product_toggle(
         )
         status = "активирован" if updated.active else "деактивирован"
         await callback.message.answer(
-            f"✅ Товар {status}!\n\n"
-            f"📦 {updated.name}\n"
-            f"SKU: `{updated.sku}`",
+            f"✅ Товар {status}!\n\n📦 {updated.name}\nSKU: `{updated.sku}`",
             reply_markup=main_menu_keyboard(),
         )
     else:

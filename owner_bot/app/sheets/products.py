@@ -18,9 +18,7 @@ _products_cache: TTLCache[list[Product]] = TTLCache(ttl_seconds=300)
 class ProductOperationsMixin:
     """Mixin for product CRUD operations."""
 
-    async def get_all_products(
-        self: BaseSheetsClient, use_cache: bool = True
-    ) -> list[Product]:
+    async def get_all_products(self: BaseSheetsClient, use_cache: bool = True) -> list[Product]:
         """Get all products from the sheet.
 
         Args:
@@ -77,9 +75,7 @@ class ProductOperationsMixin:
                 return product
         return None
 
-    async def search_products(
-        self: BaseSheetsClient, query: str, limit: int = 5
-    ) -> list[Product]:
+    async def search_products(self: BaseSheetsClient, query: str, limit: int = 5) -> list[Product]:
         """Search products by name (contains) or SKU (exact)."""
         products = await self.get_all_products()
         query_lower = query.lower()
@@ -365,9 +361,7 @@ class ProductOperationsMixin:
             last_updated_by=updated_by,
         )
 
-    async def get_product_by_row(
-        self: BaseSheetsClient, row_number: int
-    ) -> Product | None:
+    async def get_product_by_row(self: BaseSheetsClient, row_number: int) -> Product | None:
         """Get product by row number."""
         settings = get_settings()
 

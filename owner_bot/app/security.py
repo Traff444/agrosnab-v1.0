@@ -26,7 +26,12 @@ class WhitelistMiddleware(BaseMiddleware):
 
         user_id: int | None = None
 
-        if isinstance(event, Message) and event.from_user or isinstance(event, CallbackQuery) and event.from_user:
+        if (
+            isinstance(event, Message)
+            and event.from_user
+            or isinstance(event, CallbackQuery)
+            and event.from_user
+        ):
             user_id = event.from_user.id
 
         if user_id is None:

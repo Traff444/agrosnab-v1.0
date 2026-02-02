@@ -69,7 +69,7 @@ async def stock_page(callback: CallbackQuery, state: FSMContext) -> None:
 
     total_pages = (len(products) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
     start = (page - 1) * ITEMS_PER_PAGE
-    page_products = products[start:start + ITEMS_PER_PAGE]
+    page_products = products[start : start + ITEMS_PER_PAGE]
 
     await state.update_data(stock_page=page)
 

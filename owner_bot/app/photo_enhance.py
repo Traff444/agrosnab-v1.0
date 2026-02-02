@@ -37,7 +37,9 @@ def _detect_uniform_background(image: Image.Image, border_size: int = 50) -> boo
     return True
 
 
-def _find_content_bbox(image: Image.Image, border_size: int = 50) -> tuple[int, int, int, int] | None:
+def _find_content_bbox(
+    image: Image.Image, border_size: int = 50
+) -> tuple[int, int, int, int] | None:
     """Find bounding box of non-background content."""
     width, height = image.size
 
@@ -78,7 +80,9 @@ def _find_content_bbox(image: Image.Image, border_size: int = 50) -> tuple[int, 
     return (min_x, min_y, max_x, max_y)
 
 
-def enhance_photo(input_path: str | Path, output_path: str | Path | None = None) -> PhotoEnhanceResult:
+def enhance_photo(
+    input_path: str | Path, output_path: str | Path | None = None
+) -> PhotoEnhanceResult:
     """Enhance photo with safe transformations."""
     input_path = Path(input_path)
 

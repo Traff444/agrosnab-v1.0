@@ -84,8 +84,7 @@ async def process_correction_qty(message: Message, state: FSMContext) -> None:
     if not product or product.sku != sku:
         await state.clear()
         await message.answer(
-            "⚠️ Строка товара изменилась (таблица была отсортирована).\n"
-            "Откройте карточку заново.",
+            "⚠️ Строка товара изменилась (таблица была отсортирована).\nОткройте карточку заново.",
             reply_markup=main_menu_keyboard(),
         )
         return
@@ -104,9 +103,7 @@ async def process_correction_qty(message: Message, state: FSMContext) -> None:
 @router.callback_query(
     StockOperationState.correction_reason, F.data.startswith("correction_reason_")
 )
-async def process_correction_reason(
-    callback: CallbackQuery, state: FSMContext
-) -> None:
+async def process_correction_reason(callback: CallbackQuery, state: FSMContext) -> None:
     """Process correction reason selection."""
     if not callback.data:
         return
@@ -125,9 +122,7 @@ async def process_correction_reason(
     await _show_correction_preview(callback.message, state, callback.from_user.id)
 
 
-@router.message(
-    StockOperationState.correction_reason, F.text, ~F.text.startswith("/")
-)
+@router.message(StockOperationState.correction_reason, F.text, ~F.text.startswith("/"))
 async def process_correction_reason_text(message: Message, state: FSMContext) -> None:
     """Process custom correction reason text."""
     if not message.text or message.text == "❌ Отмена":
@@ -140,9 +135,7 @@ async def process_correction_reason_text(message: Message, state: FSMContext) ->
     await _show_correction_preview(message, state, message.from_user.id)
 
 
-async def _show_correction_preview(
-    message: Message, state: FSMContext, user_id: int
-) -> None:
+async def _show_correction_preview(message: Message, state: FSMContext, user_id: int) -> None:
     """Show correction preview and request confirmation."""
     data = await state.get_data()
     row_number = data["row_number"]

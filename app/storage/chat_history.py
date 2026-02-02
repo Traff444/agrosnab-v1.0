@@ -74,8 +74,6 @@ async def set_ai_mode(user_id: int, enabled: bool) -> None:
 async def get_ai_mode(user_id: int) -> bool:
     """Check if AI mode is enabled for user."""
     async with aiosqlite.connect(DB_PATH) as db:
-        cur = await db.execute(
-            "SELECT ai_mode FROM user_mode WHERE user_id=?", (user_id,)
-        )
+        cur = await db.execute("SELECT ai_mode FROM user_mode WHERE user_id=?", (user_id,))
         row = await cur.fetchone()
         return bool(row[0]) if row else False

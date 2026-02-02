@@ -22,7 +22,7 @@ async def start_search(message: Message, state: FSMContext) -> None:
     await state.clear()  # Clear FSM state to avoid conflicts with intake flow
     await state.set_state(ProductState.searching)
     await message.answer(
-        "🔍 **Поиск товара**\n\n" "Введите SKU или название товара:",
+        "🔍 **Поиск товара**\n\nВведите SKU или название товара:",
         reply_markup=cancel_keyboard(),
     )
 

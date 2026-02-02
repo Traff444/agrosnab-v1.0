@@ -112,9 +112,7 @@ class TestEnsureLogColumns:
             mock_ensure_sheet.assert_called_once_with("Списание")
 
     @pytest.mark.asyncio
-    async def test_initializes_empty_sheet_with_all_columns(
-        self, sheets_client_with_mocks
-    ):
+    async def test_initializes_empty_sheet_with_all_columns(self, sheets_client_with_mocks):
         """Empty sheet should be initialized with all columns."""
         client = sheets_client_with_mocks
 
@@ -231,9 +229,7 @@ class TestEnsureSheetExists:
 
         # Mock spreadsheets().get() to return sheet list without target
         mock_get = MagicMock()
-        mock_get.execute.return_value = {
-            "sheets": [{"properties": {"title": "Склад"}}]
-        }
+        mock_get.execute.return_value = {"sheets": [{"properties": {"title": "Склад"}}]}
         client.service.spreadsheets().get.return_value = mock_get
 
         # Mock batchUpdate()
@@ -279,9 +275,7 @@ class TestCheckOperationExists:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_returns_false_if_operation_not_found(
-        self, sheets_client_with_mocks
-    ):
+    async def test_returns_false_if_operation_not_found(self, sheets_client_with_mocks):
         """Should return False if operation_id not in recent rows."""
         client = sheets_client_with_mocks
 

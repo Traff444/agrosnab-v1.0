@@ -356,14 +356,16 @@ class TestIntakeServiceCompleteIntake:
         from app.services.intake_service import IntakeService
 
         # Setup mock
-        mock_sheets_client.create_product = AsyncMock(return_value=Product(
-            row_number=10,
-            sku="PRD-NEW-0001",
-            name="New Test",
-            price=1000.0,
-            stock=5,
-            active=True,
-        ))
+        mock_sheets_client.create_product = AsyncMock(
+            return_value=Product(
+                row_number=10,
+                sku="PRD-NEW-0001",
+                name="New Test",
+                price=1000.0,
+                stock=5,
+                active=True,
+            )
+        )
 
         service = IntakeService()
         session = IntakeSession(user_id=123456789)
@@ -380,7 +382,9 @@ class TestIntakeServiceCompleteIntake:
         assert result.product is not None
 
     @pytest.mark.asyncio
-    async def test_complete_existing_product(self, mock_sheets_client, mock_settings, sample_product):
+    async def test_complete_existing_product(
+        self, mock_sheets_client, mock_settings, sample_product
+    ):
         """Test completing intake for existing product."""
         from app.models import IntakeSession, Product
         from app.services.intake_service import IntakeService

@@ -145,17 +145,21 @@ def catalog_grid_kb(
     rows.append(nav_row)
 
     # Service buttons: 2 per row (two columns)
-    rows.append([
-        InlineKeyboardButton(text="🗂 Категории", callback_data="categories"),
-        InlineKeyboardButton(text="🔎 Поиск", callback_data="search:start"),
-    ])
+    rows.append(
+        [
+            InlineKeyboardButton(text="🗂 Категории", callback_data="categories"),
+            InlineKeyboardButton(text="🔎 Поиск", callback_data="search:start"),
+        ]
+    )
 
     # Cart and menu: 2 per row
     cart_label = f"🧺 Корзина ({cart_count})" if cart_count else "🧺 Корзина"
-    rows.append([
-        InlineKeyboardButton(text=cart_label, callback_data="cart:show"),
-        InlineKeyboardButton(text="🏠 Меню", callback_data="menu"),
-    ])
+    rows.append(
+        [
+            InlineKeyboardButton(text=cart_label, callback_data="cart:show"),
+            InlineKeyboardButton(text="🏠 Меню", callback_data="menu"),
+        ]
+    )
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -279,9 +283,7 @@ def pvz_select_kb(
     for pvz_code, address in page_items:
         # Truncate address for button
         text = address if len(address) <= 40 else address[:37] + "..."
-        rows.append(
-            [InlineKeyboardButton(text=f"📍 {text}", callback_data=f"cdek:pvz:{pvz_code}")]
-        )
+        rows.append([InlineKeyboardButton(text=f"📍 {text}", callback_data=f"cdek:pvz:{pvz_code}")])
 
     # Pagination row
     total_pages = (total + PVZ_PER_PAGE - 1) // PVZ_PER_PAGE
@@ -289,14 +291,16 @@ def pvz_select_kb(
         nav_row = []
         if page > 0:
             nav_row.append(
-                InlineKeyboardButton(text="⬅️", callback_data=f"cdek:pvz_page:{city_code}:{page - 1}")
+                InlineKeyboardButton(
+                    text="⬅️", callback_data=f"cdek:pvz_page:{city_code}:{page - 1}"
+                )
             )
-        nav_row.append(
-            InlineKeyboardButton(text=f"{page + 1}/{total_pages}", callback_data="noop")
-        )
+        nav_row.append(InlineKeyboardButton(text=f"{page + 1}/{total_pages}", callback_data="noop"))
         if page < total_pages - 1:
             nav_row.append(
-                InlineKeyboardButton(text="➡️", callback_data=f"cdek:pvz_page:{city_code}:{page + 1}")
+                InlineKeyboardButton(
+                    text="➡️", callback_data=f"cdek:pvz_page:{city_code}:{page + 1}"
+                )
             )
         rows.append(nav_row)
 
@@ -330,8 +334,12 @@ def order_confirm_kb() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="✅ Подтвердить заказ", callback_data="checkout:final"),
             ],
             [
-                InlineKeyboardButton(text="✏️ Изменить телефон", callback_data="checkout:edit:phone"),
-                InlineKeyboardButton(text="📍 Изменить доставку", callback_data="checkout:edit:delivery"),
+                InlineKeyboardButton(
+                    text="✏️ Изменить телефон", callback_data="checkout:edit:phone"
+                ),
+                InlineKeyboardButton(
+                    text="📍 Изменить доставку", callback_data="checkout:edit:delivery"
+                ),
             ],
             [
                 InlineKeyboardButton(text="❌ Отмена", callback_data="cart:show"),

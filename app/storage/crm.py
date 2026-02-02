@@ -16,8 +16,13 @@ logger = logging.getLogger(__name__)
 # Type definitions
 CrmStage = Literal["new", "engaged", "cart", "checkout", "customer", "repeat"]
 EventType = Literal[
-    "start", "catalog_view", "product_view", "search",
-    "add_to_cart", "checkout_started", "order_created"
+    "start",
+    "catalog_view",
+    "product_view",
+    "search",
+    "add_to_cart",
+    "checkout_started",
+    "order_created",
 ]
 MessageDirection = Literal["in", "out"]
 MessageType = Literal["text", "photo", "voice", "command"]
@@ -52,6 +57,7 @@ class DailyStats(TypedDict):
     checkout: int
     orders: int
     orders_total: int
+
 
 # CRM Stage priorities (higher = further in funnel)
 STAGE_PRIORITY = {
@@ -96,9 +102,7 @@ async def log_crm_event(
         )
         event_id = cursor.lastrowid
         await db.commit()
-        logger.debug(
-            "CRM event logged: user=%s, type=%s, id=%s", user_id, event_type, event_id
-        )
+        logger.debug("CRM event logged: user=%s, type=%s, id=%s", user_id, event_type, event_id)
         return event_id
 
 
@@ -352,9 +356,7 @@ async def log_crm_message(
         )
         await db.commit()
 
-        logger.debug(
-            "CRM message logged: user=%s, dir=%s, id=%s", user_id, direction, message_id
-        )
+        logger.debug("CRM message logged: user=%s, dir=%s, id=%s", user_id, direction, message_id)
         return message_id
 
 

@@ -35,4 +35,3 @@ def test_get_cdek_client_prefers_real_client_when_creds_exist(monkeypatch):
     client = cdek.get_cdek_client()
     assert client is not None
     assert isinstance(client, cdek.CdekClient)
-

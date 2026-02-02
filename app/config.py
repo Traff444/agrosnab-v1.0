@@ -29,7 +29,9 @@ class Settings(BaseSettings):
     cdek_client_id: str | None = None
     cdek_client_secret: str | None = None
     cdek_test_mode: bool = True  # Use test API by default
-    cdek_demo_mode: bool = False  # Demo mode without real CDEK API (fallback when creds are not set)
+    cdek_demo_mode: bool = (
+        False  # Demo mode without real CDEK API (fallback when creds are not set)
+    )
 
     def sheet_id(self) -> str:
         return extract_sheet_id(self.google_sheets_id)

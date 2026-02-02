@@ -46,8 +46,7 @@ async def handle_start_search(callback: CallbackQuery, state: FSMContext) -> Non
     await callback.answer()
     await state.set_state(ProductState.searching)
     await callback.message.answer(
-        "🔍 **Поиск товара**\n\n"
-        "Введите SKU или название товара:",
+        "🔍 **Поиск товара**\n\nВведите SKU или название товара:",
         reply_markup=cancel_keyboard(),
     )
 

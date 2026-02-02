@@ -46,26 +46,19 @@ class TestApplyCorrection:
     """Tests for apply_correction method."""
 
     @pytest.mark.asyncio
-    async def test_correction_down_logs_to_spisanie(
-        self, sheets_client_with_mocks, mock_product
-    ):
+    async def test_correction_down_logs_to_spisanie(self, sheets_client_with_mocks, mock_product):
         """Correction down (delta < 0) should log to 'Списание' sheet."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product  # stock = 42
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(client, "_increment_total_column", new_callable=AsyncMock),
                 ):
                     result = await client.apply_correction(
                         row_number=5,
@@ -90,26 +83,19 @@ class TestApplyCorrection:
         assert result.stock_after == 37
 
     @pytest.mark.asyncio
-    async def test_correction_up_logs_to_vnesenie(
-        self, sheets_client_with_mocks, mock_product
-    ):
+    async def test_correction_up_logs_to_vnesenie(self, sheets_client_with_mocks, mock_product):
         """Correction up (delta > 0) should log to 'Внесение' sheet."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product  # stock = 42
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(client, "_increment_total_column", new_callable=AsyncMock),
                 ):
                     result = await client.apply_correction(
                         row_number=5,
@@ -134,20 +120,14 @@ class TestApplyCorrection:
         assert result.stock_after == 50
 
     @pytest.mark.asyncio
-    async def test_correction_zero_delta_no_log(
-        self, sheets_client_with_mocks, mock_product
-    ):
+    async def test_correction_zero_delta_no_log(self, sheets_client_with_mocks, mock_product):
         """Correction with delta == 0 should not write to log."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product  # stock = 42
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 result = await client.apply_correction(
                     row_number=5,
                     new_stock=42,  # delta = 0
@@ -164,15 +144,11 @@ class TestApplyCorrection:
         assert result.stock_after == 42
 
     @pytest.mark.asyncio
-    async def test_correction_rejects_negative_stock(
-        self, sheets_client_with_mocks, mock_product
-    ):
+    async def test_correction_rejects_negative_stock(self, sheets_client_with_mocks, mock_product):
         """Correction should reject negative new_stock value."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
             result = await client.apply_correction(
@@ -187,15 +163,11 @@ class TestApplyCorrection:
         assert "отрицательным" in result.error
 
     @pytest.mark.asyncio
-    async def test_correction_returns_error_when_product_not_found(
-        self, sheets_client_with_mocks
-    ):
+    async def test_correction_returns_error_when_product_not_found(self, sheets_client_with_mocks):
         """Correction should return error if product not found."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = None
 
             result = await client.apply_correction(
@@ -216,21 +188,18 @@ class TestApplyCorrection:
         """Correction down should update Списано_всего."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
-                ) as mock_increment:
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(
+                        client, "_increment_total_column", new_callable=AsyncMock
+                    ) as mock_increment,
+                ):
                     await client.apply_correction(
                         row_number=5,
                         new_stock=37,  # delta = -5
@@ -248,21 +217,18 @@ class TestApplyCorrection:
         """Correction up should update Внесено_всего."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
-                ) as mock_increment:
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(
+                        client, "_increment_total_column", new_callable=AsyncMock
+                    ) as mock_increment,
+                ):
                     await client.apply_correction(
                         row_number=5,
                         new_stock=50,  # delta = +8
@@ -274,26 +240,19 @@ class TestApplyCorrection:
                     mock_increment.assert_called_once_with(5, "Внесено_всего", 8)
 
     @pytest.mark.asyncio
-    async def test_correction_preserves_operation_id(
-        self, sheets_client_with_mocks, mock_product
-    ):
+    async def test_correction_preserves_operation_id(self, sheets_client_with_mocks, mock_product):
         """Operation ID should be preserved in result."""
         client = sheets_client_with_mocks
 
-        with patch.object(
-            client, "get_product_by_row", new_callable=AsyncMock
-        ) as mock_get:
+        with patch.object(client, "get_product_by_row", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_product
 
-            with patch.object(
-                client, "append_log_entry", new_callable=AsyncMock
-            ) as mock_append:
+            with patch.object(client, "append_log_entry", new_callable=AsyncMock) as mock_append:
                 mock_append.return_value = True
 
-                with patch.object(
-                    client, "update_product_stock", new_callable=AsyncMock
-                ), patch.object(
-                    client, "_increment_total_column", new_callable=AsyncMock
+                with (
+                    patch.object(client, "update_product_stock", new_callable=AsyncMock),
+                    patch.object(client, "_increment_total_column", new_callable=AsyncMock),
                 ):
                     result = await client.apply_correction(
                         row_number=5,

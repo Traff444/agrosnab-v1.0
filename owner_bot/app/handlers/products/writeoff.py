@@ -69,9 +69,7 @@ async def process_writeoff_qty(message: Message, state: FSMContext) -> None:
     # Parse qty and optional reason: "5" or "3 порча"
     match = re.match(r"^(\d+)\s*(.*)$", text)
     if not match:
-        await message.answer(
-            "⚠️ Введите целое число.\n" "Примеры: `5` или `3 порча`"
-        )
+        await message.answer("⚠️ Введите целое число.\nПримеры: `5` или `3 порча`")
         return
 
     qty = int(match.group(1))
@@ -90,8 +88,7 @@ async def process_writeoff_qty(message: Message, state: FSMContext) -> None:
     if not product or product.sku != sku:
         await state.clear()
         await message.answer(
-            "⚠️ Строка товара изменилась (таблица была отсортирована).\n"
-            "Откройте карточку заново.",
+            "⚠️ Строка товара изменилась (таблица была отсортирована).\nОткройте карточку заново.",
             reply_markup=main_menu_keyboard(),
         )
         return
@@ -148,9 +145,7 @@ async def handle_writeoff_all(callback: CallbackQuery, state: FSMContext) -> Non
     )
 
 
-@router.callback_query(
-    StockOperationState.writeoff_reason, F.data.startswith("writeoff_reason_")
-)
+@router.callback_query(StockOperationState.writeoff_reason, F.data.startswith("writeoff_reason_"))
 async def process_writeoff_reason(callback: CallbackQuery, state: FSMContext) -> None:
     """Process writeoff reason selection."""
     if not callback.data:
@@ -184,9 +179,7 @@ async def process_writeoff_reason_text(message: Message, state: FSMContext) -> N
     await _show_writeoff_preview(message, state, message.from_user.id)
 
 
-async def _show_writeoff_preview(
-    message: Message, state: FSMContext, user_id: int
-) -> None:
+async def _show_writeoff_preview(message: Message, state: FSMContext, user_id: int) -> None:
     """Show writeoff preview and request confirmation."""
     data = await state.get_data()
     row_number = data["row_number"]
@@ -210,9 +203,7 @@ async def _show_writeoff_preview(
 
     if qty > stock_before:
         await message.answer(
-            f"⚠️ Остаток изменился!\n"
-            f"Текущий остаток: {stock_before} шт.\n"
-            f"Попробуйте снова.",
+            f"⚠️ Остаток изменился!\nТекущий остаток: {stock_before} шт.\nПопробуйте снова.",
             reply_markup=main_menu_keyboard(),
         )
         await state.clear()

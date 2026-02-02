@@ -118,7 +118,10 @@ class CartService:
 
         # Check cart items limit (Telegram button overflow prevention)
         if is_new_item and len(cart_items) >= MAX_CART_ITEMS:
-            return False, f"⚠️ В корзине максимум {MAX_CART_ITEMS} позиций. Оформите заказ или удалите лишнее."
+            return (
+                False,
+                f"⚠️ В корзине максимум {MAX_CART_ITEMS} позиций. Оформите заказ или удалите лишнее.",
+            )
 
         # Check current cart qty + new qty doesn't exceed stock
         if current_qty + qty > product["stock"]:

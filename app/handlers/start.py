@@ -27,23 +27,27 @@ def register_start_handlers(
     @dp.message(CommandStart())
     async def start(m: Message):
         user_id = m.from_user.id
-        username = m.from_user.username or m.from_user.first_name or ''
+        username = m.from_user.username or m.from_user.first_name or ""
 
         # AI mode disabled by default (user can enable via menu)
         await cart_store.set_ai_mode(user_id, False)
 
         # CRM: Log start event
-        await cart_store.log_crm_event(user_id, 'start', {
-            'username': username,
-            'first_name': m.from_user.first_name,
-            'source': 'direct',
-        })
+        await cart_store.log_crm_event(
+            user_id,
+            "start",
+            {
+                "username": username,
+                "first_name": m.from_user.first_name,
+                "source": "direct",
+            },
+        )
 
         # CRM: Upsert lead with consent (user agrees by proceeding)
         try:
             await sheets_client.upsert_lead(
                 user_id,
-                stage='new',
+                stage="new",
                 username=username,
                 consent_at=datetime.now(),
             )

@@ -190,7 +190,9 @@ class TestCatalogPageKb:
     def test_category_in_callback(self):
         from app.keyboards import catalog_page_kb
 
-        kb = catalog_page_kb(page=0, has_prev=False, has_next=True, category="премиум", total_items=5)
+        kb = catalog_page_kb(
+            page=0, has_prev=False, has_next=True, category="премиум", total_items=5
+        )
         next_btn = kb.inline_keyboard[0][-1]
         assert "премиум" in next_btn.callback_data
 
@@ -615,15 +617,12 @@ class TestCatalogGridKb:
         from app.keyboards import CATALOG_PAGE_SIZE, catalog_grid_kb
 
         products = [
-            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100}
-            for i in range(10)
+            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100} for i in range(10)
         ]
         kb = catalog_grid_kb(products, page=0, category="all")
         # Each product gets its own row (1 column layout)
         product_rows = [
-            row
-            for row in kb.inline_keyboard
-            if any("product:" in btn.callback_data for btn in row)
+            row for row in kb.inline_keyboard if any("product:" in btn.callback_data for btn in row)
         ]
         assert len(product_rows) == CATALOG_PAGE_SIZE  # 8 rows for 8 items (1 per row)
 
@@ -639,7 +638,13 @@ class TestCatalogGridKb:
         from app.keyboards import catalog_grid_kb
 
         # Name must exceed max_total (48) - price suffix (~10 chars) = 38+ chars to trigger truncation
-        products = [{"sku": "SKU-1", "name": "Very Long Product Name That Exceeds Maximum Length Limit", "price_rub": 100}]
+        products = [
+            {
+                "sku": "SKU-1",
+                "name": "Very Long Product Name That Exceeds Maximum Length Limit",
+                "price_rub": 100,
+            }
+        ]
         kb = catalog_grid_kb(products, page=0)
         product_btn = kb.inline_keyboard[0][0]
         # Name should be truncated with ellipsis
@@ -649,8 +654,7 @@ class TestCatalogGridKb:
         from app.keyboards import catalog_grid_kb
 
         products = [
-            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100}
-            for i in range(15)
+            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100} for i in range(15)
         ]
         kb = catalog_grid_kb(products, page=0, category="test")
         callbacks = [btn.callback_data for row in kb.inline_keyboard for btn in row]
@@ -661,8 +665,7 @@ class TestCatalogGridKb:
         from app.keyboards import catalog_grid_kb
 
         products = [
-            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100}
-            for i in range(15)
+            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100} for i in range(15)
         ]
         kb = catalog_grid_kb(products, page=0, category="премиум")
         callbacks = [btn.callback_data for row in kb.inline_keyboard for btn in row]
@@ -673,8 +676,7 @@ class TestCatalogGridKb:
 
         # With CATALOG_PAGE_SIZE=8: 17 products = 3 pages (8+8+1)
         products = [
-            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100}
-            for i in range(17)
+            {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100} for i in range(17)
         ]  # 3 pages
         kb = catalog_grid_kb(products, page=1, category="all")
         texts = [btn.text for row in kb.inline_keyboard for btn in row]

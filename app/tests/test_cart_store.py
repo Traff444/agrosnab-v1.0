@@ -178,7 +178,9 @@ async def test_get_or_create_checkout_session_existing(user_id: int) -> None:
     )
     # Second call returns existing
     order_id2, is_new2 = await cart.get_or_create_checkout_session(
-        user_id, items, lambda: "ORD-99999"  # Different generator, should be ignored
+        user_id,
+        items,
+        lambda: "ORD-99999",  # Different generator, should be ignored
     )
 
     assert order_id1 == "ORD-12345"
@@ -193,12 +195,8 @@ async def test_checkout_session_different_carts(user_id: int) -> None:
     items1 = [("SKU001", 2)]
     items2 = [("SKU001", 3)]  # Different quantity
 
-    order_id1, _ = await cart.get_or_create_checkout_session(
-        user_id, items1, lambda: "ORD-11111"
-    )
-    order_id2, _ = await cart.get_or_create_checkout_session(
-        user_id, items2, lambda: "ORD-22222"
-    )
+    order_id1, _ = await cart.get_or_create_checkout_session(user_id, items1, lambda: "ORD-11111")
+    order_id2, _ = await cart.get_or_create_checkout_session(user_id, items2, lambda: "ORD-22222")
 
     assert order_id1 == "ORD-11111"
     assert order_id2 == "ORD-22222"
@@ -209,9 +207,7 @@ async def test_mark_checkout_complete(user_id: int) -> None:
     """Test marking checkout as complete."""
     items = [("SKU001", 2)]
 
-    order_id, _ = await cart.get_or_create_checkout_session(
-        user_id, items, lambda: "ORD-12345"
-    )
+    order_id, _ = await cart.get_or_create_checkout_session(user_id, items, lambda: "ORD-12345")
     await cart.mark_checkout_complete(user_id, order_id)
 
     # Verify we can still get the session (it's completed, not deleted)
@@ -228,9 +224,7 @@ async def test_cleanup_old_checkout_sessions(user_id: int) -> None:
     items = [("SKU001", 2)]
 
     # Create pending session
-    order_id, _ = await cart.get_or_create_checkout_session(
-        user_id, items, lambda: "ORD-12345"
-    )
+    order_id, _ = await cart.get_or_create_checkout_session(user_id, items, lambda: "ORD-12345")
 
     # Cleanup pending sessions
     await cart.cleanup_old_checkout_sessions(user_id)

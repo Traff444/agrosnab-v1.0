@@ -368,9 +368,7 @@ class TestRunAi:
         """Test handling of API errors."""
         from app.ai_manager import run_ai
 
-        mock_openai_client.chat.completions.create = AsyncMock(
-            side_effect=Exception("API Error")
-        )
+        mock_openai_client.chat.completions.create = AsyncMock(side_effect=Exception("API Error"))
 
         result = await run_ai(
             api_key="test-key",

@@ -102,7 +102,9 @@ class Product:
         price_raw = get_val("Цена", 0, ["Цена_руб"])
         if isinstance(price_raw, str):
             # Remove spaces (regular and non-breaking), currency symbols
-            price_raw = price_raw.replace(" ", "").replace("\xa0", "").replace("₽", "").replace(",", ".")
+            price_raw = (
+                price_raw.replace(" ", "").replace("\xa0", "").replace("₽", "").replace(",", ".")
+            )
         price = float(price_raw or 0)
 
         # Parse package weight with error handling

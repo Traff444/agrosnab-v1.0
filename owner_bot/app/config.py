@@ -107,9 +107,7 @@ class Settings(BaseSettings):
     def cloudinary_enabled(self) -> bool:
         """Check if Cloudinary is fully configured."""
         return bool(
-            self.cloudinary_cloud_name
-            and self.cloudinary_api_key
-            and self.cloudinary_api_secret
+            self.cloudinary_cloud_name and self.cloudinary_api_key and self.cloudinary_api_secret
         )
 
     def get_google_credentials_info(self) -> dict:
