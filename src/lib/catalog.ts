@@ -25,7 +25,7 @@ interface CacheEntry {
 const CACHE_KEY = 'catalog_cache_v1';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 минут
 
-export const PLACEHOLDER_IMAGE = `${import.meta.env.BASE_URL}placeholder.webp`;
+export const PLACEHOLDER_IMAGE = `${import.meta.env.BASE_URL}placeholder.svg`;
 
 /**
  * Проверяет, является ли URL безопасным для использования в img src

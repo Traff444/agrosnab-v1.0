@@ -1,0 +1,32 @@
+<svg viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Фон -->
+  <rect width="600" height="600" fill="#FFF8F0"/>
+
+  <!-- Иконка камеры (по центру) -->
+  <g transform="translate(300, 200)">
+    <g transform="translate(-50, -50)">
+      <!-- Корпус камеры -->
+      <rect x="10" y="25" width="80" height="55" rx="8" fill="none" stroke="#6A7758" stroke-width="4"/>
+      <!-- Видоискатель сверху -->
+      <rect x="25" y="15" width="25" height="12" rx="3" fill="#6A7758"/>
+      <!-- Объектив -->
+      <circle cx="50" cy="52" r="18" fill="none" stroke="#6A7758" stroke-width="4"/>
+      <circle cx="50" cy="52" r="10" fill="none" stroke="#6A7758" stroke-width="3"/>
+      <!-- Вспышка -->
+      <circle cx="75" cy="38" r="5" fill="#6A7758"/>
+    </g>
+  </g>
+
+  <!-- Текст "Фото отсутствует" -->
+  <text
+    x="300"
+    y="340"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif"
+    font-size="28"
+    font-weight="500"
+    fill="#6A7758"
+    text-anchor="middle"
+  >
+    Фото отсутствует
+  </text>
+</svg>
