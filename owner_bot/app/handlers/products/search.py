@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @router.message(F.text == "🔍 Найти товар")
 async def start_search(message: Message, state: FSMContext) -> None:
     """Start product search."""
+    await state.clear()  # Clear FSM state to avoid conflicts with intake flow
     await state.set_state(ProductState.searching)
     await message.answer(
         "🔍 **Поиск товара**\n\n" "Введите SKU или название товара:",

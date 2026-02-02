@@ -142,8 +142,8 @@ def format_lead_card(lead: dict) -> str:
     first_seen = lead.get('first_seen_at', '')[:10] if lead.get('first_seen_at') else '—'
     last_seen = lead.get('last_seen_at', '')[:16] if lead.get('last_seen_at') else '—'
 
-    orders_count = lead.get('orders_count', 0) or 0
-    lifetime_value = lead.get('lifetime_value', 0) or 0
+    orders_count = int(lead.get('orders_count') or 0)
+    lifetime_value = int(lead.get('lifetime_value') or 0)
     last_order = lead.get('last_order_id', '') or '—'
 
     phone = lead.get('phone', '')
@@ -210,8 +210,9 @@ def format_funnel(stats: dict) -> str:
 # =============================================================================
 
 @router.message(F.text == "📊 CRM")
-async def cmd_crm(message: Message) -> None:
+async def cmd_crm(message: Message, state: FSMContext) -> None:
     """CRM main menu."""
+    await state.clear()  # Clear FSM state to avoid conflicts with intake flow
     await message.answer(
         "📊 *CRM — Управление клиентами*\n\n"
         "Выберите действие:",
@@ -297,7 +298,7 @@ async def crm_leads(cb: CallbackQuery) -> None:
         username = lead.get('username', '')[:15] or f"#{user_id}"
         stage = lead.get('stage', 'new')
         stage_emoji = STAGE_EMOJI.get(stage, '❓')
-        orders = lead.get('orders_count', 0) or 0
+        orders = int(lead.get('orders_count') or 0)
 
         label = f"{stage_emoji} {username}"
         if orders > 0:

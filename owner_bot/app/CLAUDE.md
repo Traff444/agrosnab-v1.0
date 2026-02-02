@@ -16,25 +16,26 @@
 |--------------|------------------|---------|
 | `intake.py` | `confirm` | Подтверждение создания товара |
 | `intake.py` | `cancel` | Отмена операции |
+| `intake.py` | `skip_weight` | Пропустить ввод веса (только новые товары) |
 | `intake.py` | `skip_photo` | Пропустить загрузку фото |
 | `intake.py` | `keep_photo` | Оставить текущее фото |
 | `intake.py` | `edit_*` | Редактирование полей |
 | `health.py` | `cleanup_confirm` | Подтверждение очистки файлов |
-| `products.py` | `product_intake_<row>` | Приход для товара |
-| `products.py` | `product_writeoff_<row>` | Списание товара |
-| `products.py` | `product_correction_<row>` | Корректировка остатка |
-| `products.py` | `product_photo_<row>` | Замена фото |
-| `products.py` | `product_archive_<row>` | Архивация товара |
-| `products.py` | `product_more_<row>` | Дополнительные действия |
-| `products.py` | `product_back_<row>` | Назад к карточке |
-| `products.py` | `writeoff_reason_*` | Выбор причины списания |
-| `products.py` | `writeoff_all_<row>` | Списать весь остаток |
-| `products.py` | `correction_reason_*` | Выбор причины корректировки |
-| `products.py` | `archive_simple_<row>` | Архивация без обнуления |
-| `products.py` | `archive_zero_<row>` | Архивация с обнулением |
-| `products.py` | `confirm_action_<id>` | Подтверждение операции |
-| `products.py` | `back_to_product` | Вернуться к карточке товара |
-| `products.py` | `start_search` | Начать новый поиск |
+| `products/card.py` | `product_intake_<row>` | Приход для товара |
+| `products/card.py` | `product_writeoff_<row>` | Списание товара |
+| `products/card.py` | `product_correction_<row>` | Корректировка остатка |
+| `products/card.py` | `product_photo_<row>` | Замена фото |
+| `products/card.py` | `product_archive_<row>` | Архивация товара |
+| `products/card.py` | `product_more_<row>` | Дополнительные действия |
+| `products/card.py` | `product_back_<row>` | Назад к карточке |
+| `products/writeoff.py` | `writeoff_reason_*` | Выбор причины списания |
+| `products/writeoff.py` | `writeoff_all_<row>` | Списать весь остаток |
+| `products/correction.py` | `correction_reason_*` | Выбор причины корректировки |
+| `products/archive.py` | `archive_simple_<row>` | Архивация без обнуления |
+| `products/archive.py` | `archive_zero_<row>` | Архивация с обнулением |
+| `products/confirmation.py` | `confirm_action_<id>` | Подтверждение операции |
+| `products/navigation.py` | `back_to_product` | Вернуться к карточке товара |
+| `products/navigation.py` | `start_search` | Начать новый поиск |
 | `stock.py` | `stock_page_<N>` | Пагинация списка товаров |
 | `stock.py` | `stock_select_<row>` | Выбор товара из списка |
 | `stock.py` | `stock_close` | Закрыть список товаров |
@@ -51,6 +52,7 @@
 IntakeStates:
   waiting_input      → Ожидание ввода данных
   selecting_product  → Выбор существующего товара
+  waiting_weight     → Ввод веса упаковки (только для новых товаров)
   waiting_photo      → Ожидание фото
   analyzing_photo    → Анализ качества фото
   confirming         → Предпросмотр и подтверждение
@@ -85,6 +87,7 @@ StockOperationState:
 | `Цена` | `Цена`, `Цена_руб` |
 | `Остаток` | `Остаток`, `Остаток_расчет` |
 | `Фото` | `Фото`, `Фото_URL` |
+| `Вес` | `Вес`, `Вес_упаковки` |
 
 ### Листы "Внесение" и "Списание" (v1.1)
 
@@ -122,7 +125,7 @@ L: note           → Примечание
 5. Get shareable URL
 6. Write URL to Google Sheets
 
-## Stock Operations (sheets.py)
+## Stock Operations (sheets/logging.py)
 
 ### Методы логирования
 

@@ -25,6 +25,23 @@ QUANTITY_PATTERNS = [
     r"(?:x|х)\s*(\d+)",  # x10, х5
 ]
 
+# Weight pattern (package weight in grams)
+WEIGHT_PATTERN = re.compile(r"(\d+)\s*[гg](?:\s|$|[^a-zA-Zа-яА-Я])", re.IGNORECASE)
+
+
+def _extract_weight(text: str) -> tuple[int | None, str]:
+    """Extract package weight from text. Returns (weight_grams, text_without_weight)."""
+    match = WEIGHT_PATTERN.search(text)
+    if match:
+        weight = int(match.group(1))
+        # Validate reasonable weight range (1g to 100kg)
+        if 1 <= weight <= 100000:
+            # Remove the weight token from text
+            text_without_weight = text[:match.start()] + text[match.end():]
+            text_without_weight = re.sub(r"\s+", " ", text_without_weight).strip()
+            return weight, text_without_weight
+    return None, text
+
 
 def _extract_numbers(text: str) -> list[tuple[float, int, int]]:
     """Extract all numbers with their positions. Returns (value, start, end)."""
@@ -54,11 +71,13 @@ def parse_intake_string(raw_input: str) -> ParsedIntake:
     Parse quick intake string.
 
     Expected formats:
+    - "Махорка СССР 50г 500 10" → name="Махорка СССР", weight=50, price=500, qty=10
     - "Махорка СССР 500 10" → name="Махорка СССР", price=500, qty=10
     - "Тест" → name="Тест", confidence=low
     - "Новый товар 1500р 5шт" → name="Новый товар", price=1500, qty=5
 
     Heuristics:
+    - Weight is extracted first by suffix "г" or "g" (e.g., 50г, 100g)
     - Last number is usually quantity (if reasonable: 1-1000)
     - Previous number is usually price (if reasonable: 1-1000000)
     - Everything else is name
@@ -68,12 +87,16 @@ def parse_intake_string(raw_input: str) -> ParsedIntake:
     if not raw_input:
         return ParsedIntake(raw_input=raw_input, confidence=IntakeConfidence.LOW)
 
-    numbers = _extract_numbers(raw_input)
+    # Extract weight first (by suffix "г" or "g")
+    weight, text_after_weight = _extract_weight(raw_input)
+
+    numbers = _extract_numbers(text_after_weight)
 
     # No numbers - just a name with low confidence
     if not numbers:
         return ParsedIntake(
-            name=raw_input,
+            name=text_after_weight if text_after_weight else raw_input,
+            weight=weight,
             raw_input=raw_input,
             confidence=IntakeConfidence.LOW,
         )
@@ -102,13 +125,14 @@ def parse_intake_string(raw_input: str) -> ParsedIntake:
                 break
 
         # Extract name (text before first number or cleaned text)
-        name = _clean_text(raw_input)
+        name = _clean_text(text_after_weight)
 
         if name and price and quantity:
             return ParsedIntake(
                 name=name,
                 price=price,
                 quantity=quantity,
+                weight=weight,
                 raw_input=raw_input,
                 confidence=IntakeConfidence.HIGH,
             )
@@ -116,7 +140,7 @@ def parse_intake_string(raw_input: str) -> ParsedIntake:
     elif len(numbers) == 1:
         # One number - could be price or quantity
         val, start, end = numbers[0]
-        name = _clean_text(raw_input)
+        name = _clean_text(text_after_weight)
 
         # If small integer, likely quantity
         if 1 <= val <= 100 and val == int(val):
@@ -129,17 +153,19 @@ def parse_intake_string(raw_input: str) -> ParsedIntake:
             name=name if name else None,
             price=price,
             quantity=quantity,
+            weight=weight,
             raw_input=raw_input,
             confidence=IntakeConfidence.LOW,
         )
 
     # Fallback: return what we have with low confidence
-    name = _clean_text(raw_input) or raw_input
+    name = _clean_text(text_after_weight) or text_after_weight
 
     return ParsedIntake(
         name=name,
         price=price,
         quantity=quantity,
+        weight=weight,
         raw_input=raw_input,
         confidence=IntakeConfidence.LOW if not (price and quantity) else IntakeConfidence.HIGH,
     )
@@ -151,6 +177,8 @@ def format_parsed_intake(parsed: ParsedIntake) -> str:
 
     if parsed.name:
         lines.append(f"📦 **Товар:** {parsed.name}")
+    if parsed.weight is not None:
+        lines.append(f"⚖️ **Вес:** {parsed.weight} г")
     if parsed.price is not None:
         lines.append(f"💰 **Цена:** {parsed.price:.2f} ₽")
     if parsed.quantity is not None:

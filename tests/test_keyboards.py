@@ -619,13 +619,13 @@ class TestCatalogGridKb:
             for i in range(10)
         ]
         kb = catalog_grid_kb(products, page=0, category="all")
-        # First 6 products in 3 rows of 2
+        # Each product gets its own row (1 column layout)
         product_rows = [
             row
             for row in kb.inline_keyboard
             if any("product:" in btn.callback_data for btn in row)
         ]
-        assert len(product_rows) == CATALOG_PAGE_SIZE // 2  # 3 rows for 6 items
+        assert len(product_rows) == CATALOG_PAGE_SIZE  # 8 rows for 8 items (1 per row)
 
     def test_cart_count_displayed(self):
         from app.keyboards import catalog_grid_kb
@@ -638,7 +638,8 @@ class TestCatalogGridKb:
     def test_product_name_truncated(self):
         from app.keyboards import catalog_grid_kb
 
-        products = [{"sku": "SKU-1", "name": "Very Long Product Name Here", "price_rub": 100}]
+        # Name must exceed max_total (48) - price suffix (~10 chars) = 38+ chars to trigger truncation
+        products = [{"sku": "SKU-1", "name": "Very Long Product Name That Exceeds Maximum Length Limit", "price_rub": 100}]
         kb = catalog_grid_kb(products, page=0)
         product_btn = kb.inline_keyboard[0][0]
         # Name should be truncated with ellipsis
@@ -670,9 +671,10 @@ class TestCatalogGridKb:
     def test_page_indicator_shows_correct_total(self):
         from app.keyboards import catalog_grid_kb
 
+        # With CATALOG_PAGE_SIZE=8: 17 products = 3 pages (8+8+1)
         products = [
             {"sku": f"SKU-{i}", "name": f"Product {i}", "price_rub": 100}
-            for i in range(13)
+            for i in range(17)
         ]  # 3 pages
         kb = catalog_grid_kb(products, page=1, category="all")
         texts = [btn.text for row in kb.inline_keyboard for btn in row]
@@ -732,4 +734,4 @@ class TestCatalogPageSizeConstant:
     def test_constant_value(self):
         from app.keyboards import CATALOG_PAGE_SIZE
 
-        assert CATALOG_PAGE_SIZE == 6
+        assert CATALOG_PAGE_SIZE == 8

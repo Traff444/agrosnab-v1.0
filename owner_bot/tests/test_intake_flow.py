@@ -4,6 +4,85 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.intake_parser import parse_intake_string
+from app.models import IntakeConfidence
+
+
+class TestIntakeParserWeight:
+    """Test cases for intake parser with weight support."""
+
+    def test_parse_quick_string_with_weight(self):
+        """Test parsing quick string with weight in grams."""
+        result = parse_intake_string("Махорка СССР 50г 500 10")
+
+        assert result.name == "Махорка СССР"
+        assert result.weight == 50
+        assert result.price == 500.0
+        assert result.quantity == 10
+        assert result.confidence == IntakeConfidence.HIGH
+
+    def test_parse_quick_string_with_weight_g_latin(self):
+        """Test parsing weight with latin 'g' suffix."""
+        result = parse_intake_string("Product 100g 200 5")
+
+        assert result.name == "Product"
+        assert result.weight == 100
+        assert result.price == 200.0
+        assert result.quantity == 5
+
+    def test_parse_quick_string_without_weight(self):
+        """Test parsing quick string without weight (backward compatibility)."""
+        result = parse_intake_string("Махорка СССР 500 10")
+
+        assert result.name == "Махорка СССР"
+        assert result.weight is None
+        assert result.price == 500.0
+        assert result.quantity == 10
+        assert result.confidence == IntakeConfidence.HIGH
+
+    def test_parse_quick_string_weight_with_space(self):
+        """Test parsing weight with space before suffix."""
+        result = parse_intake_string("Товар 50 г 300 15")
+
+        assert result.name == "Товар"
+        assert result.weight == 50
+        assert result.price == 300.0
+        assert result.quantity == 15
+
+    def test_parse_only_name_with_weight(self):
+        """Test parsing name with weight only."""
+        result = parse_intake_string("Новый товар 200г")
+
+        assert result.name == "Новый товар"
+        assert result.weight == 200
+        assert result.confidence == IntakeConfidence.LOW
+
+    def test_parse_weight_at_various_positions(self):
+        """Test that weight is extracted correctly regardless of position."""
+        result = parse_intake_string("Табак 500 100г 10")
+
+        # Weight should be extracted by suffix, not position
+        assert result.weight == 100
+        assert result.name == "Табак"
+        # price and qty extracted from remaining numbers
+        assert result.price == 500.0
+        assert result.quantity == 10
+
+    def test_parse_realistic_product_names(self):
+        """Test realistic product names with weight."""
+        test_cases = [
+            ("Махорка Дедушкина 50г 450 20", "Махорка Дедушкина", 50, 450.0, 20),
+            ("Самосад крупный 100г 800 5", "Самосад крупный", 100, 800.0, 5),
+            ("Табак Вирджиния 25г 300 30", "Табак Вирджиния", 25, 300.0, 30),
+        ]
+
+        for input_str, exp_name, exp_weight, exp_price, exp_qty in test_cases:
+            result = parse_intake_string(input_str)
+            assert result.name == exp_name, f"Failed for: {input_str}"
+            assert result.weight == exp_weight, f"Failed for: {input_str}"
+            assert result.price == exp_price, f"Failed for: {input_str}"
+            assert result.quantity == exp_qty, f"Failed for: {input_str}"
+
 
 class TestIntakeSession:
     """Test cases for IntakeSession model."""
@@ -130,6 +209,36 @@ class TestIntakeService:
         mock_store.save.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_update_session_from_parsed_with_weight(self):
+        """Test updating session from parsed intake with weight."""
+        from app.models import IntakeConfidence, IntakeSession, ParsedIntake
+        from app.services.intake_service import IntakeService
+
+        mock_store = MagicMock()
+        mock_store.save = AsyncMock()
+
+        service = IntakeService()
+        session = IntakeSession(user_id=123456789)
+
+        parsed = ParsedIntake(
+            name="Product with Weight",
+            price=500.0,
+            quantity=10,
+            weight=50,
+            confidence=IntakeConfidence.HIGH,
+            raw_input="Product with Weight 50г 500 10",
+        )
+
+        with patch("app.services.intake_service.intake_session_store", mock_store):
+            await service.update_session_from_parsed(session, parsed)
+
+        assert session.name == "Product with Weight"
+        assert session.price == 500.0
+        assert session.quantity == 10
+        assert session.package_weight == 50
+        mock_store.save.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_set_existing_product(self, sample_product):
         """Test setting existing product in session."""
         from app.models import IntakeSession
@@ -193,6 +302,24 @@ class TestIntakeService:
         assert "New Product" in preview
         assert "1000" in preview
         assert "+5" in preview
+
+    @pytest.mark.asyncio
+    async def test_format_session_preview_with_weight(self):
+        """Test preview formatting includes package weight."""
+        from app.models import IntakeSession
+        from app.services.intake_service import IntakeService
+
+        service = IntakeService()
+        session = IntakeSession(user_id=123456789)
+        session.name = "Product with Weight"
+        session.price = 500.0
+        session.quantity = 10
+        session.package_weight = 250
+        session.is_new_product = True
+
+        preview = service.format_session_preview(session)
+
+        assert "⚖️ Вес: 250 г" in preview
 
     @pytest.mark.asyncio
     async def test_format_session_preview_existing_product(self, sample_product):

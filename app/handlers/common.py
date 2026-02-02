@@ -26,6 +26,7 @@ def format_product(p: dict[str, Any], compact: bool = False) -> str:
     else:
         desc = escape_html(p.get("desc_short", ""))
         tags = escape_html(p.get("tags", ""))
+        weight = p.get("package_weight")
         lines = [
             "━━━━━━━━━━━━━━━━━━━━━━",
             f"🏷 <b>{name}</b>",
@@ -34,6 +35,8 @@ def format_product(p: dict[str, Any], compact: bool = False) -> str:
             f"{stock_emoji} <b>В наличии:</b> {stock} шт.",
             f"📦 <b>Артикул:</b> <code>{sku}</code>",
         ]
+        if weight:
+            lines.append(f"⚖️ <b>Вес:</b> {weight} г")
         if desc:
             lines.append(f"\n📝 {desc}")
         if tags:
@@ -47,6 +50,7 @@ def format_product_card(product: dict[str, Any]) -> str:
     stock_emoji = "✅" if product["stock"] > 5 else ("⚠️" if product["stock"] > 0 else "❌")
     name = escape_html(product["name"])
     sku = escape_html(product["sku"])
+    weight = product.get("package_weight")
 
     caption = (
         f"🏷 <b>{name}</b>\n\n"
@@ -54,6 +58,9 @@ def format_product_card(product: dict[str, Any]) -> str:
         f"{stock_emoji} <b>В наличии:</b> {product['stock']} шт.\n"
         f"📦 <b>Артикул:</b> <code>{sku}</code>"
     )
+
+    if weight:
+        caption += f"\n⚖️ <b>Вес:</b> {weight} г"
 
     desc = product.get("desc_short", "")
     if desc:

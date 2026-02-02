@@ -54,6 +54,7 @@ def sample_product():
         description="Test description",
         tags="test,sample",
         active=True,
+        package_weight=100,
     )
 
 
@@ -76,26 +77,30 @@ def mock_sheets_client(monkeypatch):
     from app.sheets.models import StockOperationResult
 
     mock = MagicMock()
-    mock.load_column_map = AsyncMock(return_value={
-        "SKU": 0,
-        "Наименование": 1,
-        "Цена": 2,
-        "Остаток": 3,
-        "Фото": 4,
-        "Активен": 5,
-    })
+    mock.load_column_map = AsyncMock(
+        return_value={
+            "SKU": 0,
+            "Наименование": 1,
+            "Цена": 2,
+            "Остаток": 3,
+            "Фото": 4,
+            "Активен": 5,
+        }
+    )
     mock.get_all_products = AsyncMock(return_value=[])
     mock.search_products = AsyncMock(return_value=[])
     mock.find_product_by_sku = AsyncMock(return_value=None)
     mock.create_product = AsyncMock()
     mock.update_product_stock = AsyncMock()
     mock.update_product_photo = AsyncMock()
-    mock.apply_intake = AsyncMock(return_value=StockOperationResult(
-        ok=True,
-        stock_before=0,
-        stock_after=5,
-        operation_id="test_op_123",
-    ))
+    mock.apply_intake = AsyncMock(
+        return_value=StockOperationResult(
+            ok=True,
+            stock_before=0,
+            stock_after=5,
+            operation_id="test_op_123",
+        )
+    )
 
     monkeypatch.setattr("app.sheets.sheets_client", mock)
     return mock
@@ -107,11 +112,13 @@ def mock_drive_client(monkeypatch):
     from app.models import DriveUploadResult
 
     mock = MagicMock()
-    mock.upload_photo = AsyncMock(return_value=DriveUploadResult(
-        file_id="test_file_id",
-        public_url="https://drive.google.com/uc?export=view&id=test_file_id",
-        permissions_ok=True,
-    ))
+    mock.upload_photo = AsyncMock(
+        return_value=DriveUploadResult(
+            file_id="test_file_id",
+            public_url="https://drive.google.com/uc?export=view&id=test_file_id",
+            permissions_ok=True,
+        )
+    )
     mock.delete_photo = AsyncMock(return_value=True)
     mock.test_connection = AsyncMock(return_value={"ok": True})
 

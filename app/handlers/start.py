@@ -10,7 +10,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, Message
 
 from .. import cart_store
-from ..keyboards import back_to_menu_kb, main_menu_kb
+from ..keyboards import back_to_menu_kb, main_menu_kb, persistent_menu
 from ..services import ProductService
 from ..sheets import SheetsClient
 
@@ -53,12 +53,18 @@ def register_start_handlers(
         # Get cart count for display
         cart_count = await cart_store.get_cart_count(user_id)
 
-        # Single inline menu - no persistent keyboard
+        # Set persistent keyboard (reply buttons at bottom)
         await m.answer(
             "👋 <b>Добро пожаловать в наш магазин!</b>\n\n"
             "📦 Выберите действие ниже.\n"
             "🤖 AI-менеджер доступен в меню.\n\n"
             "📋 Нажимая кнопки, вы соглашаетесь с обработкой данных.",
+            parse_mode="HTML",
+            reply_markup=persistent_menu(),
+        )
+        # Show inline menu
+        await m.answer(
+            "📋 <b>Главное меню:</b>",
             parse_mode="HTML",
             reply_markup=main_menu_kb(cart_count),
         )

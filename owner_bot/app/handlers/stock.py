@@ -24,6 +24,7 @@ ITEMS_PER_PAGE = 8
 @router.message(F.text == "📊 Склад")
 async def show_stock(message: Message, state: FSMContext) -> None:
     """Show all products with pagination."""
+    await state.clear()  # Clear FSM state to avoid conflicts with intake flow
     products = await sheets_client.get_all_products()
 
     if not products:

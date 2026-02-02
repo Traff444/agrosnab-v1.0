@@ -138,3 +138,40 @@ class TestFormatProductButton:
         product = {"name": "Редкий Товар", "price_rub": 1500, "stock": 0, "tags": "#hit"}
         result = format_product_button(product)
         assert result == "⛔️ Редкий Товар — нет в наличии"
+
+    def test_with_package_weight(self):
+        """Product with weight shows weight in name: 'Махорка СССР 50г — 500 ₽'."""
+        product = {
+            "name": "Махорка СССР",
+            "price_rub": 500,
+            "stock": 10,
+            "tags": "#hit",
+            "package_weight": 50,
+        }
+        result = format_product_button(product)
+        assert result == "🔥 Махорка СССР 50г — 500 ₽"
+
+    def test_without_package_weight(self):
+        """Product without weight shows only name."""
+        product = {
+            "name": "Махорка Классическая",
+            "price_rub": 777,
+            "stock": 10,
+            "tags": "",
+            "package_weight": None,
+        }
+        result = format_product_button(product)
+        assert result == "Махорка Классическая — 777 ₽"
+
+    def test_weight_zero_not_shown(self):
+        """Product with weight=0 (falsy) does not show weight."""
+        product = {
+            "name": "Товар",
+            "price_rub": 500,
+            "stock": 10,
+            "tags": "",
+            "package_weight": 0,
+        }
+        result = format_product_button(product)
+        assert "г" not in result
+        assert result == "Товар — 500 ₽"

@@ -239,6 +239,29 @@ class SheetsClient:
             out[k] = v
         return out
 
+    def _build_column_map(self, header: list[str]) -> dict[str, int]:
+        """Build column index map from header row with flexible matching."""
+
+        def find_col(names: list[str]) -> int:
+            for name in names:
+                for i, h in enumerate(header):
+                    if name.lower() in h:
+                        return i
+            return -1
+
+        return {
+            "sku": find_col(["sku", "артикул", "код"]),
+            "name": find_col(["наименование", "название", "товар"]),
+            "price": find_col(["цена", "price", "стоимость"]),
+            "desc": find_col(["описание_кратко", "описание", "desc"]),
+            "desc_full": find_col(["описание_полное", "полное"]),
+            "stock": find_col(["остаток_расчет", "остаток", "stock", "стартовый"]),
+            "active": find_col(["активен", "active", "вкл"]),
+            "tags": find_col(["теги", "tags", "категория"]),
+            "photo": find_col(["фото", "photo", "url", "картинка", "изображение"]),
+            "weight": find_col(["вес", "weight", "вес_упаковки", "упаковка"]),
+        }
+
     def get_products(self) -> list[dict[str, Any]]:
         """
         Flexible product parser that works with different table structures.
@@ -256,30 +279,13 @@ class SheetsClient:
         header = [str(h).strip().lower() for h in rows[0]]
         data = rows[1:]
 
-        # Build column index map (flexible matching)
-        def find_col(names: list) -> int:
-            for name in names:
-                for i, h in enumerate(header):
-                    if name.lower() in h:
-                        return i
-            return -1
+        cols = self._build_column_map(header)
 
-        col_sku = find_col(["sku", "артикул", "код"])
-        col_name = find_col(["наименование", "название", "товар"])
-        col_price = find_col(["цена", "price", "стоимость"])
-        col_desc = find_col(["описание_кратко", "описание", "desc"])
-        col_desc_full = find_col(["описание_полное", "полное"])
-        col_stock = find_col(["остаток_расчет", "остаток", "stock", "стартовый"])
-        col_active = find_col(["активен", "active", "вкл"])
-        col_tags = find_col(["теги", "tags", "категория"])
-        col_photo = find_col(["фото", "photo", "url", "картинка", "изображение"])
-
-        if col_sku == -1 or col_name == -1:
+        if cols["sku"] == -1 or cols["name"] == -1:
             return []  # Minimal required columns
 
-        def to_int(x, default=0):
+        def to_int(x: Any, default: int = 0) -> int:
             try:
-                # Handle non-breaking spaces (\xa0) and regular spaces
                 clean = (
                     str(x).replace("\xa0", "").replace(" ", "").replace("₽", "").replace(",", ".")
                 )
@@ -287,37 +293,36 @@ class SheetsClient:
             except Exception:
                 return default
 
-        def safe_get(row, idx, default=""):
+        def safe_get(row: list[Any], idx: int, default: str = "") -> str:
             if idx == -1 or idx >= len(row):
                 return default
             return str(row[idx]).strip()
 
         products = []
         for r in data:
-            sku = safe_get(r, col_sku)
+            sku = safe_get(r, cols["sku"])
             if not sku:
                 continue
 
-            # Check "Активен" column if exists, otherwise assume active
-            if col_active != -1:
-                active_val = safe_get(r, col_active).lower()
+            if cols["active"] != -1:
+                active_val = safe_get(r, cols["active"]).lower()
                 if active_val and active_val not in ("да", "yes", "1", "true", ""):
                     continue
 
-            # Get stock: try Остаток_расчет first, then Стартовый_остаток
-            stock = to_int(safe_get(r, col_stock), 100)  # Default 100 if no stock column
+            stock = to_int(safe_get(r, cols["stock"]), 100)
 
             products.append(
                 {
                     "sku": sku,
-                    "name": safe_get(r, col_name, "Без названия"),
-                    "desc_short": safe_get(r, col_desc),
-                    "desc_full": safe_get(r, col_desc_full),
-                    "price_rub": to_int(safe_get(r, col_price), 0),
+                    "name": safe_get(r, cols["name"], "Без названия"),
+                    "desc_short": safe_get(r, cols["desc"]),
+                    "desc_full": safe_get(r, cols["desc_full"]),
+                    "price_rub": to_int(safe_get(r, cols["price"]), 0),
                     "stock": stock,
                     "supplier_id": "",
-                    "photo_url": convert_photo_url(safe_get(r, col_photo)),
-                    "tags": safe_get(r, col_tags),
+                    "photo_url": convert_photo_url(safe_get(r, cols["photo"])),
+                    "tags": safe_get(r, cols["tags"]),
+                    "package_weight": to_int(safe_get(r, cols["weight"]), 0) or None,
                 }
             )
         return products

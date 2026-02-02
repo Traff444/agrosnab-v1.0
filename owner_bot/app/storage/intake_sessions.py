@@ -63,6 +63,7 @@ class IntakeSessionStore:
             "name": session.name,
             "price": session.price,
             "quantity": session.quantity,
+            "package_weight": session.package_weight,
             "sku": session.sku,
             "is_new_product": session.is_new_product,
             "photo_file_id": session.photo_file_id,
@@ -84,6 +85,7 @@ class IntakeSessionStore:
                 "description": session.existing_product.description,
                 "tags": session.existing_product.tags,
                 "active": session.existing_product.active,
+                "package_weight": session.existing_product.package_weight,
             }
 
         # Serialize photo_quality if present
@@ -100,43 +102,51 @@ class IntakeSessionStore:
 
         return json.dumps(data, ensure_ascii=False)
 
+    def _reconstruct_existing_product(self, data: dict[str, Any]) -> Any | None:
+        """Reconstruct Product from serialized data."""
+        from app.models import Product
+
+        ep = data.get("existing_product")
+        if not ep:
+            return None
+
+        return Product(
+            row_number=ep["row_number"],
+            sku=ep["sku"],
+            name=ep["name"],
+            price=ep["price"],
+            stock=ep["stock"],
+            photo_url=ep.get("photo_url", ""),
+            description=ep.get("description", ""),
+            tags=ep.get("tags", ""),
+            active=ep.get("active", True),
+            package_weight=ep.get("package_weight"),
+        )
+
+    def _reconstruct_photo_quality(self, data: dict[str, Any]) -> Any | None:
+        """Reconstruct PhotoQualityResult from serialized data."""
+        from app.models import PhotoQualityResult, PhotoStatus
+
+        pq = data.get("photo_quality")
+        if not pq:
+            return None
+
+        return PhotoQualityResult(
+            status=PhotoStatus(pq["status"]),
+            width=pq["width"],
+            height=pq["height"],
+            sharpness=pq["sharpness"],
+            brightness_low=pq["brightness_low"],
+            brightness_high=pq["brightness_high"],
+            warnings=pq.get("warnings", []),
+        )
+
     def _deserialize_session(self, json_str: str) -> IntakeSession:
         """Deserialize JSON string to IntakeSession."""
-        from app.models import IntakeSession, PhotoQualityResult, PhotoStatus, Product
+        from app.models import IntakeSession
 
         data = json.loads(json_str)
 
-        # Reconstruct existing_product
-        existing_product = None
-        if data.get("existing_product"):
-            ep = data["existing_product"]
-            existing_product = Product(
-                row_number=ep["row_number"],
-                sku=ep["sku"],
-                name=ep["name"],
-                price=ep["price"],
-                stock=ep["stock"],
-                photo_url=ep.get("photo_url", ""),
-                description=ep.get("description", ""),
-                tags=ep.get("tags", ""),
-                active=ep.get("active", True),
-            )
-
-        # Reconstruct photo_quality
-        photo_quality = None
-        if data.get("photo_quality"):
-            pq = data["photo_quality"]
-            photo_quality = PhotoQualityResult(
-                status=PhotoStatus(pq["status"]),
-                width=pq["width"],
-                height=pq["height"],
-                sharpness=pq["sharpness"],
-                brightness_low=pq["brightness_low"],
-                brightness_high=pq["brightness_high"],
-                warnings=pq.get("warnings", []),
-            )
-
-        # Parse created_at
         created_at = datetime.now()
         if data.get("created_at"):
             with contextlib.suppress(ValueError):
@@ -147,13 +157,14 @@ class IntakeSessionStore:
             name=data.get("name"),
             price=data.get("price"),
             quantity=data.get("quantity"),
+            package_weight=data.get("package_weight"),
             sku=data.get("sku"),
-            existing_product=existing_product,
+            existing_product=self._reconstruct_existing_product(data),
             is_new_product=data.get("is_new_product", True),
             photo_file_id=data.get("photo_file_id"),
             drive_file_id=data.get("drive_file_id"),
             drive_url=data.get("drive_url"),
-            photo_quality=photo_quality,
+            photo_quality=self._reconstruct_photo_quality(data),
             fingerprint=data.get("fingerprint"),
             created_at=created_at,
         )

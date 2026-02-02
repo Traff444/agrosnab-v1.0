@@ -1,6 +1,7 @@
 """Health check and status handlers."""
 
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.drive import drive_client
@@ -13,8 +14,9 @@ router = Router()
 
 
 @router.message(F.text == "🔧 Статус")
-async def show_status(message: Message) -> None:
+async def show_status(message: Message, state: FSMContext) -> None:
     """Show system status and health checks."""
+    await state.clear()  # Clear FSM state to avoid conflicts with intake flow
     await message.answer("🔍 Проверяю подключения...")
 
     # Run checks in parallel-ish manner

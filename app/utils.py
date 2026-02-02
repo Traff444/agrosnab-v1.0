@@ -109,11 +109,11 @@ def smart_truncate_name(name: str, max_len: int) -> str:
 
 
 def format_product_button(product, max_total: int = 48) -> str:
-    """Build product button text: 'badge Name — price ₽' or 'badge Name — нет в наличии'.
+    """Build product button text: 'badge Name weight — price ₽' or 'badge Name — нет в наличии'.
 
     Examples:
         - "Махорка — 1 000 ₽"
-        - "🔥 Махорка СССР — 1 000 ₽"
+        - "🔥 Махорка СССР 50г — 1 000 ₽"
         - "⛔️ Редкий Товар — нет в наличии"
     """
     badge = resolve_badge(product)
@@ -124,10 +124,19 @@ def format_product_button(product, max_total: int = 48) -> str:
         stock = product.get("stock", 1)
         name_raw = product.get("name", "")
         price_value = product.get("price_rub") or product.get("price", 0)
+        weight = product.get("package_weight")
     else:
         stock = getattr(product, "stock", 1)
         name_raw = getattr(product, "name", "")
         price_value = getattr(product, "price_rub", None) or getattr(product, "price", 0)
+        weight = getattr(product, "package_weight", None)
+
+    # Add weight to name if present and non-zero
+    # NOTE: weight=0 is intentionally treated as "no weight" (falsy) to avoid
+    # displaying "0г" suffix. This matches the UX expectation that zero means
+    # weight was not specified rather than an actual 0-gram package.
+    if weight:
+        name_raw = f"{name_raw} {weight}г"
 
     if stock == 0:
         suffix = " — нет в наличии"

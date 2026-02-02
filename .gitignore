@@ -70,3 +70,9 @@ dist-ssr
 
 # OpenMemory - IDE/Assistant specific rules
 .cursor/rules/openmemory.mdc
+
+# Python package manager lock files
+uv.lock
+
+# Google Apps Script backups
+google-apps-script/*.xlsx

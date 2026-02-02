@@ -19,7 +19,9 @@ from app.keyboards import (
     photo_decision_keyboard,
     photo_quality_keyboard,
     product_match_keyboard,
+    quick_weight_keyboard,
     retry_keyboard,
+    skip_weight_keyboard,
 )
 from app.models import IntakeConfidence
 from app.photo_enhance import format_enhance_report
@@ -39,6 +41,7 @@ class IntakeState(StatesGroup):
     waiting_for_price = State()
     waiting_for_quantity = State()
     waiting_for_match_decision = State()
+    waiting_for_weight = State()
     waiting_for_photo_decision = State()
     waiting_for_photo = State()
     photo_review = State()
@@ -59,8 +62,10 @@ async def start_intake(message: Message, state: FSMContext) -> None:
     await message.answer(
         "📦 **Приход товара**\n\n"
         "Введите данные одним сообщением:\n"
-        "`Название Цена Количество`\n\n"
-        "Пример: `Махорка СССР 500 10`\n\n"
+        "`Название [Вес] Цена Количество`\n\n"
+        "Примеры:\n"
+        "• `Махорка СССР 50г 500 10`\n"
+        "• `Махорка СССР 500 10` (без веса)\n\n"
         "Или просто название товара для пошагового ввода.",
         reply_markup=cancel_keyboard(),
     )
@@ -193,9 +198,9 @@ async def _check_matching_products(message: Message, state: FSMContext, session)
             reply_markup=product_match_keyboard(matches),
         )
     else:
-        # No matches - create new product
+        # No matches - create new product, ask for weight first
         await intake_service.set_new_product(session)
-        await _ask_photo_decision(message, state, session)
+        await _ask_weight(message, state, session)
 
 
 @router.callback_query(IntakeState.waiting_for_match_decision, F.data.startswith("match_"))
@@ -204,7 +209,7 @@ async def process_match_decision(callback: CallbackQuery, state: FSMContext) -> 
     if not callback.from_user or not callback.data:
         return
 
-    logger.info("process_match_decision: user=%s, data=%s", callback.from_user.id, callback.data)
+    logger.debug("process_match_decision: user=%s, data=%s", callback.from_user.id, callback.data)
 
     session = await intake_service.get_session(callback.from_user.id)
     if not session:
@@ -215,13 +220,14 @@ async def process_match_decision(callback: CallbackQuery, state: FSMContext) -> 
     await callback.answer()
 
     if callback.data == "match_new":
-        logger.info("process_match_decision: creating NEW product")
+        logger.debug("process_match_decision: creating NEW product")
         await intake_service.set_new_product(session)
-        await _ask_photo_decision(callback.message, state, session)
+        # For new products, ask for weight first
+        await _ask_weight(callback.message, state, session)
     else:
         # Selected existing product
         row_number = int(callback.data.replace("match_", ""))
-        logger.info("process_match_decision: selected EXISTING product row=%d", row_number)
+        logger.debug("process_match_decision: selected EXISTING product row=%d", row_number)
         products = await product_service.get_all()
         product = next((p for p in products if p.row_number == row_number), None)
 
@@ -230,8 +236,107 @@ async def process_match_decision(callback: CallbackQuery, state: FSMContext) -> 
             return
 
         await intake_service.set_existing_product(session, product)
-        logger.info("process_match_decision: set existing_product SKU=%s", product.sku)
+        logger.debug("process_match_decision: set existing_product SKU=%s", product.sku)
+        # Existing products already have weight in the table
         await _ask_photo_decision(callback.message, state, session)
+
+
+async def _ask_weight(message: Message, state: FSMContext, session) -> None:
+    """Ask for package weight (optional, only for new products)."""
+    # If weight was already parsed from quick-string, skip this step
+    if session.package_weight is not None:
+        await _ask_photo_decision(message, state, session)
+        return
+
+    await state.set_state(IntakeState.waiting_for_weight)
+    await message.answer(
+        "⚖️ Выберите вес упаковки:",
+        reply_markup=quick_weight_keyboard(),
+    )
+
+
+@router.callback_query(IntakeState.waiting_for_weight, F.data == "skip_weight")
+async def skip_weight(callback: CallbackQuery, state: FSMContext) -> None:
+    """Skip weight input."""
+    if not callback.from_user:
+        return
+
+    session = await intake_service.get_session(callback.from_user.id)
+    if not session:
+        await callback.answer("Сессия истекла", show_alert=True)
+        await state.clear()
+        return
+
+    session.package_weight = None
+    await intake_service.save_session(session)
+    await callback.answer()
+    await _ask_photo_decision(callback.message, state, session)
+
+
+@router.callback_query(IntakeState.waiting_for_weight, F.data.startswith("quick_weight:"))
+async def handle_quick_weight(callback: CallbackQuery, state: FSMContext) -> None:
+    """Handle quick weight selection buttons."""
+    if not callback.from_user or not callback.data:
+        return
+
+    session = await intake_service.get_session(callback.from_user.id)
+    if not session:
+        await callback.answer("Сессия истекла", show_alert=True)
+        await state.clear()
+        return
+
+    await callback.answer()
+
+    # Extract weight value from callback_data
+    weight_value = callback.data.split(":")[1]
+
+    if weight_value == "skip":
+        # Skip weight - proceed without it
+        session.package_weight = None
+        await intake_service.save_session(session)
+        await _ask_photo_decision(callback.message, state, session)
+    elif weight_value == "custom":
+        # Custom weight - ask for manual input
+        await callback.message.answer(
+            "⚖️ Введите вес упаковки в граммах:",
+            reply_markup=skip_weight_keyboard(),
+        )
+    else:
+        # Numeric weight selected
+        session.package_weight = int(weight_value)
+        await intake_service.save_session(session)
+        await _ask_photo_decision(callback.message, state, session)
+
+
+@router.message(IntakeState.waiting_for_weight, F.text, ~F.text.startswith("/"), ~F.text.in_({"❌ Отмена"}))
+async def process_weight(message: Message, state: FSMContext) -> None:
+    """Process weight input."""
+    if not message.from_user or not message.text:
+        return
+
+    session = await intake_service.get_session(message.from_user.id)
+    if not session:
+        await _restart_intake(message, state)
+        return
+
+    try:
+        # Remove common weight suffixes
+        weight_text = message.text.replace("г", "").replace("гр", "").replace("g", "").strip()
+        weight = int(weight_text)
+        if weight <= 0:
+            raise ValueError("Weight must be positive")
+        if weight > 100000:  # 100kg max reasonable package weight
+            raise ValueError("Weight exceeds maximum")
+        session.package_weight = weight
+    except ValueError:
+        await message.answer(
+            "❌ Введите целое число (в граммах) или нажмите Пропустить:",
+            reply_markup=skip_weight_keyboard(),
+        )
+        return
+
+    await intake_service.save_session(session)
+    await _ask_photo_decision(message, state, session)
 
 
 async def _ask_photo_decision(message: Message, state: FSMContext, session) -> None:
@@ -317,6 +422,61 @@ async def process_photo(message: Message, state: FSMContext, bot: Bot) -> None:
     )
 
 
+async def _handle_photo_accept(
+    callback: CallbackQuery, state: FSMContext, session, tmp_path: str | None
+) -> None:
+    """Handle photo accept action - upload as-is."""
+    if tmp_path:
+        result = await intake_service.upload_photo(session, tmp_path)
+        if not result.permissions_ok:
+            await callback.message.answer(
+                f"⚠️ Фото загружено, но не удалось установить публичный доступ:\n"
+                f"{result.error_message}"
+            )
+        with contextlib.suppress(OSError):
+            os.unlink(tmp_path)
+    await _show_preview(callback.message, state, session)
+
+
+async def _handle_photo_enhance(
+    callback: CallbackQuery, state: FSMContext, session, tmp_path: str | None
+) -> None:
+    """Handle photo enhance action - improve and re-analyze."""
+    if not tmp_path:
+        return
+
+    enhanced_path = await intake_service.enhance_photo(tmp_path)
+    from app.photo_enhance import enhance_photo
+
+    result = enhance_photo(tmp_path)
+    await callback.message.answer(format_enhance_report(result))
+
+    quality = await intake_service.download_and_analyze_photo(session, enhanced_path)
+    await state.update_data(tmp_path=enhanced_path)
+
+    await callback.message.answer(
+        format_quality_report(quality),
+        reply_markup=photo_quality_keyboard(quality.status.value),
+    )
+
+
+async def _handle_photo_retake(
+    callback: CallbackQuery, state: FSMContext, session, tmp_path: str | None
+) -> None:
+    """Handle photo retake action - clean up and ask for new photo."""
+    if tmp_path:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp_path)
+    session.photo_file_id = None
+    session.photo_quality = None
+    await intake_service.save_session(session)
+    await state.set_state(IntakeState.waiting_for_photo)
+    await callback.message.answer(
+        "📷 Отправьте новое фото товара:",
+        reply_markup=cancel_keyboard(),
+    )
+
+
 @router.callback_query(IntakeState.photo_review)
 async def process_photo_review(callback: CallbackQuery, state: FSMContext) -> None:
     """Process photo quality review decision."""
@@ -334,51 +494,11 @@ async def process_photo_review(callback: CallbackQuery, state: FSMContext) -> No
     tmp_path = data.get("tmp_path")
 
     if callback.data == "photo_accept":
-        # Upload as-is
-        if tmp_path:
-            result = await intake_service.upload_photo(session, tmp_path)
-            if not result.permissions_ok:
-                await callback.message.answer(
-                    f"⚠️ Фото загружено, но не удалось установить публичный доступ:\n"
-                    f"{result.error_message}"
-                )
-            # Clean up tmp file
-            with contextlib.suppress(OSError):
-                os.unlink(tmp_path)
-        await _show_preview(callback.message, state, session)
-
+        await _handle_photo_accept(callback, state, session, tmp_path)
     elif callback.data == "photo_enhance":
-        # Enhance and show result
-        if tmp_path:
-            enhanced_path = await intake_service.enhance_photo(tmp_path)
-            from app.photo_enhance import enhance_photo
-
-            result = enhance_photo(tmp_path)
-            await callback.message.answer(format_enhance_report(result))
-
-            # Re-analyze enhanced photo
-            quality = await intake_service.download_and_analyze_photo(session, enhanced_path)
-            await state.update_data(tmp_path=enhanced_path)
-
-            await callback.message.answer(
-                format_quality_report(quality),
-                reply_markup=photo_quality_keyboard(quality.status.value),
-            )
-
+        await _handle_photo_enhance(callback, state, session, tmp_path)
     elif callback.data == "photo_retake":
-        # Clean up and ask for new photo
-        if tmp_path:
-            with contextlib.suppress(OSError):
-                os.unlink(tmp_path)
-        session.photo_file_id = None
-        session.photo_quality = None
-        await intake_service.save_session(session)
-        await state.set_state(IntakeState.waiting_for_photo)
-        await callback.message.answer(
-            "📷 Отправьте новое фото товара:",
-            reply_markup=cancel_keyboard(),
-        )
-
+        await _handle_photo_retake(callback, state, session, tmp_path)
     elif callback.data == "cancel":
         if tmp_path:
             with contextlib.suppress(OSError):
@@ -412,7 +532,7 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
     if not callback.from_user or not callback.data:
         return
 
-    logger.info("process_preview_confirm: user=%s, data=%s", callback.from_user.id, callback.data)
+    logger.debug("process_preview_confirm: user=%s, data=%s", callback.from_user.id, callback.data)
 
     session = await intake_service.get_session(callback.from_user.id)
     if not session:
@@ -421,7 +541,7 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
         await state.clear()
         return
 
-    logger.info(
+    logger.debug(
         "process_preview_confirm: session found, is_new=%s, name=%s, qty=%s, drive_url=%s",
         session.is_new_product, session.name, session.quantity, session.drive_url
     )
@@ -429,19 +549,19 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
     await callback.answer()
 
     if callback.data == "confirm":
-        logger.info("process_preview_confirm: user confirmed, calling complete_intake")
+        logger.debug("process_preview_confirm: user confirmed, calling complete_intake")
         # Execute the intake
         username = callback.from_user.username or str(callback.from_user.id)
         result = await intake_service.complete_intake(session, updated_by=f"tg:{username}")
 
-        logger.info(
+        logger.debug(
             "process_preview_confirm: result.success=%s, is_new=%s, error=%s",
             result.success, result.is_new, result.error
         )
 
         if result.success:
             action = "создан" if result.is_new else "обновлён"
-            logger.info("process_preview_confirm: SUCCESS - product %s", action)
+            logger.debug("process_preview_confirm: SUCCESS - product %s", action)
             card = product_service.format_product_card(result.product, show_service_fields=True)
 
             await callback.message.answer(

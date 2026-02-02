@@ -105,6 +105,7 @@ class ProductOperationsMixin:
         photo_url: str = "",
         description: str = "",
         tags: str = "",
+        package_weight: int | None = None,
         updated_by: str = "owner_bot",
     ) -> Product:
         """Create a new product in the sheet."""
@@ -113,7 +114,12 @@ class ProductOperationsMixin:
         now = datetime.now().isoformat()
 
         logger.info(
-            "create_product: sku=%s, name=%s, price=%s, qty=%s", sku, name, price, quantity
+            "create_product: sku=%s, name=%s, price=%s, qty=%s, photo_url=%s",
+            sku,
+            name,
+            price,
+            quantity,
+            photo_url,
         )
 
         row = [""] * (max(self._col_map.values()) + 1)
@@ -129,6 +135,8 @@ class ProductOperationsMixin:
             row[self._col_map["Теги"]] = tags
         if "Описание_кратко" in self._col_map:
             row[self._col_map["Описание_кратко"]] = description
+        if "Вес_упаковки" in self._col_map and package_weight:
+            row[self._col_map["Вес_упаковки"]] = package_weight
         if "last_intake_at" in self._col_map:
             row[self._col_map["last_intake_at"]] = now
         if "last_intake_qty" in self._col_map:
@@ -170,6 +178,7 @@ class ProductOperationsMixin:
             description=description,
             tags=tags,
             active=True,
+            package_weight=package_weight,
             last_intake_at=datetime.now(),
             last_intake_qty=quantity,
             last_updated_by=updated_by,
@@ -250,6 +259,7 @@ class ProductOperationsMixin:
             description=product.description,
             tags=product.tags,
             active=product.active,
+            package_weight=product.package_weight,
             last_intake_at=datetime.now(),
             last_intake_qty=quantity_delta,
             last_updated_by=updated_by,
@@ -299,6 +309,7 @@ class ProductOperationsMixin:
             description=product.description,
             tags=product.tags,
             active=product.active,
+            package_weight=product.package_weight,
             last_intake_at=product.last_intake_at,
             last_intake_qty=product.last_intake_qty,
             last_updated_by=updated_by,
@@ -348,6 +359,7 @@ class ProductOperationsMixin:
             description=product.description,
             tags=product.tags,
             active=active,
+            package_weight=product.package_weight,
             last_intake_at=product.last_intake_at,
             last_intake_qty=product.last_intake_qty,
             last_updated_by=updated_by,

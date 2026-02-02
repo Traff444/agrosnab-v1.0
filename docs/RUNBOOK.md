@@ -8,7 +8,7 @@
 
 **Процесс:**
 1. Push в `main` → запускается GitHub Actions
-2. Сборка: `npm run build` в папке `sitemahorkaproject/`
+2. Сборка: `npm run build`
 3. Деплой: `dist/` → GitHub Pages
 
 **Конфигурация:**
@@ -34,13 +34,17 @@
 
 **Запуск локально:**
 ```bash
-# Shop Bot
-ruff check app/ && ruff format --check app/ && pytest tests/
+# Shop Bot (50 тестов)
+ruff check app/ && ruff format --check app/ && uv run pytest app/tests/ -v
 
 # Owner Bot
 cd owner_bot
-ruff check app/ && ruff format --check app/ && pytest tests/
+ruff check app/ && ruff format --check app/ && uv run pytest tests/ -v
 ```
+
+**Ожидаемые результаты:**
+- Shop Bot: 50 passed
+- Owner Bot: 16+ passed (intake flow tests)
 
 ---
 
@@ -124,6 +128,22 @@ npm run build
 - `Apps Script error: ...` — ошибка от Google Sheets
 - `Ошибка загрузки каталога: ...` — сетевая ошибка
 
+### Логи Owner Bot
+
+```bash
+# Просмотр логов в реальном времени
+docker compose logs -f owner-bot
+
+# Уровень DEBUG для отладки
+LOG_LEVEL=DEBUG docker compose up
+```
+
+**Уровни логирования:**
+- `DEBUG` — детальная информация для отладки
+- `INFO` — стандартные события (по умолчанию)
+- `WARNING` — предупреждения
+- `ERROR` — ошибки
+
 ## Частые проблемы
 
 ### Каталог не загружается
@@ -158,7 +178,37 @@ curl -sL "$VITE_APPS_SCRIPT_URL"
 2. Фото недоступно (приватный Google Drive)
 3. CORS-ограничения
 
-**Решение:** Используйте публичные URL или настройте Google Drive sharing
+**Решение:** Используйте публичные URL (Cloudinary рекомендуется)
+
+### Вес упаковки не отображается
+
+**Симптом:** Вес не показывается в кнопке товара
+
+**Проверьте:**
+1. Колонка `Вес_упаковки` существует в листе "Склад"
+2. Значение не пустое и > 0
+3. Формат: число в граммах (например, 500 для 500г)
+
+**Примечание:** weight=0 намеренно не отображается (считается как "не указан")
+
+### Ошибка валидации веса в Owner Bot
+
+**Симптом:** "Введите целое число (в граммах)"
+
+**Причины:**
+1. Введено не число
+2. Вес <= 0
+3. Вес > 100000 (100кг — максимум)
+
+**Решение:** Введите число от 1 до 100000 или нажмите "Пропустить"
+
+### Сессия intake истекла
+
+**Симптом:** "Сессия истекла" при продолжении ввода
+
+**Причина:** TTL сессии 24 часа, бот перезапустился, или SQLite база недоступна
+
+**Решение:** Начните приход заново командой "📦 Приход товара"
 
 ## Rollback
 
@@ -177,6 +227,20 @@ npm run build
 2. Выберите нужную версию
 3. Восстановите
 
+### Откат Owner Bot базы
+
+SQLite база находится в `data/owner_bot.db`. Для отката:
+```bash
+# Остановить бот
+docker compose down
+
+# Восстановить из бэкапа
+cp data/owner_bot.db.backup data/owner_bot.db
+
+# Запустить бот
+docker compose up -d
+```
+
 ## Google Apps Script
 
 ### Передеплой Apps Script
@@ -191,6 +255,25 @@ npm run build
 Файл: `google-apps-script/Code.gs`
 
 При изменениях в структуре Google Sheets обновите маппинг колонок в `COLUMNS`.
+
+## Безопасность
+
+### Проверка npm уязвимостей
+
+```bash
+npm audit
+npm audit fix
+```
+
+**Текущий статус:** 3 moderate vulnerabilities (esbuild/vite) — требуют major version upgrade
+
+### Ротация секретов
+
+1. **Telegram Bot Token:** @BotFather → Revoke current token
+2. **Google Service Account:** Google Cloud Console → IAM → Service Accounts → Keys
+3. **Cloudinary:** Cloudinary Console → Settings → Security
+
+После ротации обновите `.env` и перезапустите ботов.
 
 ## Контакты
 

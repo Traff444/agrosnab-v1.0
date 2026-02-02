@@ -300,6 +300,34 @@ def pagination_keyboard(
     return InlineKeyboardMarkup(inline_keyboard=[buttons])
 
 
+def skip_weight_keyboard() -> InlineKeyboardMarkup:
+    """Keyboard with skip option for weight input."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⏭ Пропустить", callback_data="skip_weight")],
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel")],
+        ]
+    )
+
+
+def quick_weight_keyboard() -> InlineKeyboardMarkup:
+    """Quick weight selection keyboard with common weight options."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="25г", callback_data="quick_weight:25"),
+                InlineKeyboardButton(text="50г", callback_data="quick_weight:50"),
+                InlineKeyboardButton(text="100г", callback_data="quick_weight:100"),
+                InlineKeyboardButton(text="200г", callback_data="quick_weight:200"),
+            ],
+            [
+                InlineKeyboardButton(text="✏️ Другой вес", callback_data="quick_weight:custom"),
+                InlineKeyboardButton(text="⏭ Пропустить", callback_data="quick_weight:skip"),
+            ],
+        ]
+    )
+
+
 def stock_list_keyboard(
     products: list[Product],
     current_page: int,

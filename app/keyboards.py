@@ -144,14 +144,18 @@ def catalog_grid_kb(
         )
     rows.append(nav_row)
 
-    # Service buttons: 1 per row (single column)
-    rows.append([InlineKeyboardButton(text="🗂 Категории", callback_data="categories")])
-    rows.append([InlineKeyboardButton(text="🔎 Поиск", callback_data="search:start")])
+    # Service buttons: 2 per row (two columns)
+    rows.append([
+        InlineKeyboardButton(text="🗂 Категории", callback_data="categories"),
+        InlineKeyboardButton(text="🔎 Поиск", callback_data="search:start"),
+    ])
 
-    # Cart with counter
+    # Cart and menu: 2 per row
     cart_label = f"🧺 Корзина ({cart_count})" if cart_count else "🧺 Корзина"
-    rows.append([InlineKeyboardButton(text=cart_label, callback_data="cart:show")])
-    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="menu")])
+    rows.append([
+        InlineKeyboardButton(text=cart_label, callback_data="cart:show"),
+        InlineKeyboardButton(text="🏠 Меню", callback_data="menu"),
+    ])
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

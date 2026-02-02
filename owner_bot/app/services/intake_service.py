@@ -74,6 +74,8 @@ class IntakeService:
             session.price = parsed.price
         if parsed.quantity is not None:
             session.quantity = parsed.quantity
+        if parsed.weight is not None:
+            session.package_weight = parsed.weight
         await intake_session_store.save(session)
         return session
 
@@ -158,6 +160,46 @@ class IntakeService:
         else:
             return await self._update_existing_product(session, updated_by)
 
+    def _validate_new_product_session(self, session: IntakeSession) -> str | None:
+        """Validate session has required fields for new product. Returns error message or None."""
+        if not session.name or session.price is None or session.quantity is None:
+            logger.warning(
+                "_validate_new_product_session: missing fields - name=%s, price=%s, qty=%s",
+                session.name,
+                session.price,
+                session.quantity,
+            )
+            return "Не заполнены обязательные поля: название, цена, количество"
+        return None
+
+    async def _log_new_product_intake(
+        self,
+        session: IntakeSession,
+        product: Product,
+        updated_by: str,
+    ) -> None:
+        """Log intake for newly created product."""
+        if session.quantity <= 0:
+            return
+
+        actor_username = updated_by.replace("tg:", "")
+        intake_result = await sheets_client.apply_intake(
+            row_number=product.row_number,
+            qty=session.quantity,
+            stock_before=0,
+            stock_after=session.quantity,
+            reason="new_product",
+            actor_id=session.user_id,
+            actor_username=actor_username,
+            operation_id=secrets.token_hex(8),
+            note="Создание нового товара",
+        )
+        if not intake_result.ok:
+            logger.warning(
+                "_log_new_product_intake: failed to log intake: %s",
+                intake_result.error,
+            )
+
     async def _create_new_product(
         self,
         session: IntakeSession,
@@ -165,30 +207,26 @@ class IntakeService:
     ) -> IntakeResult:
         """Create new product from session."""
         logger.info("_create_new_product: starting")
-        if not session.name or session.price is None or session.quantity is None:
-            logger.warning(
-                "_create_new_product: missing fields - name=%s, price=%s, qty=%s",
-                session.name,
-                session.price,
-                session.quantity,
-            )
-            return IntakeResult(
-                success=False,
-                error="Не заполнены обязательные поля: название, цена, количество",
-            )
+
+        validation_error = self._validate_new_product_session(session)
+        if validation_error:
+            return IntakeResult(success=False, error=validation_error)
 
         try:
             logger.info(
-                "_create_new_product: calling sheets_client.create_product(%s, %s, %s)",
+                "_create_new_product: calling sheets_client.create_product(%s, %s, %s, weight=%s, photo_url=%s)",
                 session.name,
                 session.price,
                 session.quantity,
+                session.package_weight,
+                session.drive_url,
             )
             product = await sheets_client.create_product(
                 name=session.name,
                 price=session.price,
                 quantity=session.quantity,
                 photo_url=session.drive_url or "",
+                package_weight=session.package_weight,
                 updated_by=updated_by,
             )
             logger.info(
@@ -197,25 +235,7 @@ class IntakeService:
                 product.row_number,
             )
 
-            # Log intake to "Внесение" sheet
-            if session.quantity > 0:
-                actor_username = updated_by.replace("tg:", "")
-                intake_result = await sheets_client.apply_intake(
-                    row_number=product.row_number,
-                    qty=session.quantity,
-                    stock_before=0,  # New product starts at 0
-                    stock_after=session.quantity,
-                    reason="new_product",
-                    actor_id=session.user_id,
-                    actor_username=actor_username,
-                    operation_id=secrets.token_hex(8),
-                    note="Создание нового товара",
-                )
-                if not intake_result.ok:
-                    logger.warning(
-                        "_create_new_product: failed to log intake: %s",
-                        intake_result.error,
-                    )
+            await self._log_new_product_intake(session, product, updated_by)
 
             return IntakeResult(
                 success=True,
@@ -331,6 +351,8 @@ class IntakeService:
             lines.append(f"💰 Цена: {session.price:.2f} ₽")
         if session.quantity is not None:
             lines.append(f"📊 Количество: +{session.quantity} шт.")
+        if session.package_weight:
+            lines.append(f"⚖️ Вес: {session.package_weight} г")
 
         if session.existing_product and session.quantity:
             old_stock = session.existing_product.stock

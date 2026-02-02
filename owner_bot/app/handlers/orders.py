@@ -4,6 +4,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.config import get_settings
@@ -13,8 +14,9 @@ router = Router()
 
 
 @router.message(F.text == "📋 Заказы сегодня")
-async def show_orders_today(message: Message) -> None:
+async def show_orders_today(message: Message, state: FSMContext) -> None:
     """Show today's orders summary."""
+    await state.clear()  # Clear FSM state to avoid conflicts with intake flow
     settings = get_settings()
     tz = ZoneInfo(settings.timezone)
     today = datetime.now(tz).date()

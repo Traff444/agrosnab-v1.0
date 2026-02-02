@@ -27,6 +27,7 @@ class ParsedIntake:
     name: str | None = None
     price: float | None = None
     quantity: int | None = None
+    weight: int | None = None  # Package weight in grams (e.g., 50г)
     confidence: IntakeConfidence = IntakeConfidence.LOW
     raw_input: str = ""
 
@@ -78,6 +79,7 @@ class Product:
     description: str = ""
     tags: str = ""
     active: bool = True
+    package_weight: int | None = None
     last_intake_at: datetime | None = None
     last_intake_qty: int | None = None
     last_updated_by: str | None = None
@@ -103,6 +105,16 @@ class Product:
             price_raw = price_raw.replace(" ", "").replace("\xa0", "").replace("₽", "").replace(",", ".")
         price = float(price_raw or 0)
 
+        # Parse package weight with error handling
+        weight_raw = get_val("Вес_упаковки", None, ["Вес"])
+        package_weight = None
+        if weight_raw:
+            try:
+                weight_clean = str(weight_raw).replace("г", "").replace("g", "").strip()
+                package_weight = int(float(weight_clean))
+            except (ValueError, TypeError):
+                package_weight = None
+
         return cls(
             row_number=row_number,
             sku=str(get_val("SKU", "")),
@@ -113,6 +125,7 @@ class Product:
             description=str(get_val("Описание_кратко", "")),
             tags=str(get_val("Теги", "")),
             active=str(get_val("Активен", "да")).lower() in ("true", "да", "yes", "1"),
+            package_weight=package_weight,
             last_intake_at=None,  # Parsed separately if needed
             last_intake_qty=int(get_val("last_intake_qty", 0) or 0) or None,
             last_updated_by=get_val("last_updated_by") or None,
@@ -127,6 +140,7 @@ class IntakeSession:
     name: str | None = None
     price: float | None = None
     quantity: int | None = None
+    package_weight: int | None = None
     sku: str | None = None
     existing_product: Product | None = None
     is_new_product: bool = True
@@ -145,6 +159,7 @@ class IntakeSession:
             str(self.name or ""),
             str(self.price or ""),
             str(self.quantity or ""),
+            str(self.package_weight or ""),
             str(self.sku or ""),
             str(self.photo_file_id or ""),
         ]
