@@ -16,7 +16,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <div className="rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col h-full group border-2 border-white/80" style={{ backgroundColor: '#FFF8F0' }}>
-      <div className="relative w-full aspect-[4/3] bg-white flex-shrink-0 overflow-hidden">
+      <div className="relative w-full h-56 md:h-64 bg-white flex-shrink-0 overflow-hidden">
         {!inStock && (
           <div className="absolute top-3 right-3 z-10 bg-gray-600 text-white text-xs font-medium px-2.5 py-1 rounded-full shadow-md">
             Нет в наличии
@@ -25,7 +25,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <img
           src={photoUrl}
           alt={name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
           onError={handleImageError}
         />
       </div>
