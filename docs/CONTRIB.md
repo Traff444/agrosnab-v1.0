@@ -82,6 +82,8 @@ npm run typecheck && npm run lint && npm run build
 | `CDEK_CLIENT_ID` | Нет | ID клиента CDEK API |
 | `CDEK_CLIENT_SECRET` | Нет | Секрет клиента CDEK API |
 | `CDEK_TEST_MODE` | Нет | Тестовый режим CDEK API (true/false) |
+| `OWNER_TELEGRAM_IDS` | Нет | ID владельцев через запятую (для уведомлений) |
+| `OWNER_BOT_TOKEN` | Нет | Токен бота управляющего (уведомления о заказах) |
 
 ### Owner Bot (owner_bot/)
 
@@ -154,14 +156,11 @@ interface Product {
 ### Запуск тестов (Shop Bot)
 
 ```bash
-# Все тесты (50 тестов)
-uv run pytest app/tests/ -v
-
-# Тесты форматирования каталога
-uv run pytest app/tests/test_catalog_format.py -v
+# Все тесты (255 тестов)
+uv run pytest tests/ -v
 
 # С покрытием
-uv run pytest app/tests/ --cov=app --cov-report=term-missing
+uv run pytest tests/ --cov=app --cov-report=term-missing
 ```
 
 ### Запуск тестов (Owner Bot)
@@ -188,7 +187,7 @@ uv run pytest tests/ --cov=app --cov-report=term-missing
 
 ```bash
 # Shop Bot
-ruff check app/ && ruff format --check app/ && pytest app/tests/
+ruff check app/ && ruff format --check app/ && pytest tests/
 
 # Owner Bot
 cd owner_bot && ruff check app/ && ruff format --check app/ && pytest tests/
@@ -200,6 +199,12 @@ cd owner_bot && ruff check app/ && ruff format --check app/ && pytest tests/
 |----------|----------|
 | Товар в наличии (stock > 0) | Кнопка "Получить прайс" |
 | Товар не в наличии (stock = 0) | Бейдж ⛔️ в каталоге, "Нет в наличии" на сайте |
+| Повторить заказ (есть история) | Товары из последнего заказа добавляются в корзину |
+| Повторить заказ (нет истории) | Сообщение "У вас пока нет заказов" |
+| Повторить заказ (товар закончился) | Товар пропущен, предупреждение показано |
+| Сохранённый телефон при чекауте | Предлагает кнопку с прошлым номером |
+| Невалидный телефон (не РФ) | Ошибка с примером формата |
+| Уведомление управляющему | Заказ приходит в бот управляющего |
 | Товар с тегом #hit | Бейдж 🔥 в каталоге |
 | Товар с тегом #sale | Бейдж 🏷️ в каталоге (приоритет над #hit) |
 | Товар с тегом #new | Бейдж 🆕 в каталоге |

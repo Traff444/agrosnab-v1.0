@@ -34,8 +34,8 @@
 
 **Запуск локально:**
 ```bash
-# Shop Bot (50 тестов)
-ruff check app/ && ruff format --check app/ && uv run pytest app/tests/ -v
+# Shop Bot (255 тестов)
+ruff check app/ && ruff format --check app/ && uv run pytest tests/ -v
 
 # Owner Bot
 cd owner_bot
@@ -43,7 +43,7 @@ ruff check app/ && ruff format --check app/ && uv run pytest tests/ -v
 ```
 
 **Ожидаемые результаты:**
-- Shop Bot: 50 passed
+- Shop Bot: 255 passed
 - Owner Bot: 16+ passed (intake flow tests)
 
 ---
@@ -209,6 +209,64 @@ curl -sL "$VITE_APPS_SCRIPT_URL"
 **Причина:** TTL сессии 24 часа, бот перезапустился, или SQLite база недоступна
 
 **Решение:** Начните приход заново командой "📦 Приход товара"
+
+### Уведомления о заказах не приходят
+
+**Симптом:** Управляющий не получает уведомления о новых заказах
+
+**Проверьте:**
+1. `OWNER_BOT_TOKEN` указан в `.env` shop bot
+2. `OWNER_TELEGRAM_IDS` содержит правильные ID через запятую
+3. Управляющий ранее писал `/start` в бот управляющего
+
+**Логи:**
+```bash
+docker compose logs bot | grep "notify owner"
+```
+
+### Счёт-фактура не отправляется
+
+**Симптом:** Заказ оформлен, но PDF не приходит
+
+**Причина:** Директория `/app/data/invoices/` не создалась
+
+**Решение:** Директория создаётся автоматически (`os.makedirs`). Проверьте права на volume `./data:/app/data`.
+
+### «Повторить заказ» не работает
+
+**Симптом:** "У вас пока нет заказов"
+
+**Причина:** История заказов сохраняется с момента добавления фичи. Предыдущие заказы не в `user_orders`.
+
+**Решение:** Оформите новый заказ — он сохранится для повторения.
+
+## SQLite (Shop Bot)
+
+База: `data/bot.sqlite3` (автосоздаётся при первом запуске)
+
+**Таблицы:**
+| Таблица | Назначение |
+|---------|-----------|
+| `cart_items` | Текущая корзина пользователя |
+| `checkout_sessions` | Идемпотентность чекаута |
+| `order_counter` | Порядковая нумерация ORD-000001 |
+| `user_profiles` | Сохранённые телефон, ФИО, адрес |
+| `user_orders` | История заказов для «Повторить заказ» |
+| `user_mode` | AI/обычный режим |
+| `chat_history` | История чата с AI-менеджером |
+| `crm_events` | CRM-события (add_to_cart, checkout, order) |
+| `crm_messages` | CRM-сообщения пользователей |
+
+**Просмотр:**
+```bash
+docker compose exec bot python -c "
+import sqlite3; db=sqlite3.connect('/app/data/bot.sqlite3')
+for t in db.execute(\"SELECT name FROM sqlite_master WHERE type='table'\").fetchall():
+    print(t[0], db.execute(f'SELECT COUNT(*) FROM {t[0]}').fetchone()[0])
+"
+```
+
+---
 
 ## Rollback
 
