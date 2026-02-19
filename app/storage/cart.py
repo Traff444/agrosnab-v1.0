@@ -184,3 +184,90 @@ async def cleanup_old_checkout_sessions(user_id: int) -> None:
             (user_id,),
         )
         await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# User profiles — remember phone, FIO, address between orders
+# ---------------------------------------------------------------------------
+
+async def get_user_profile(user_id: int) -> dict[str, str]:
+    """Get saved user profile (phone, fio, last_address)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT phone, fio, last_address FROM user_profiles WHERE user_id = ?",
+            (user_id,),
+        )
+        row = await cur.fetchone()
+        if row:
+            return {
+                "phone": row["phone"] or "",
+                "fio": row["fio"] or "",
+                "last_address": row["last_address"] or "",
+            }
+        return {"phone": "", "fio": "", "last_address": ""}
+
+
+async def save_user_order(
+    user_id: int, order_id: str, items: list[CartItem],
+) -> None:
+    """Save completed order for 'repeat last order' feature."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO user_orders(user_id, order_id, items_json) VALUES(?, ?, ?)",
+            (user_id, order_id, json.dumps(items)),
+        )
+        await db.commit()
+
+
+async def get_last_user_order(user_id: int) -> list[CartItem] | None:
+    """Return items from the user's most recent order, or None."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "SELECT items_json FROM user_orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+            (user_id,),
+        )
+        row = await cur.fetchone()
+        if not row:
+            return None
+        return json.loads(row[0])
+
+
+async def save_user_profile(
+    user_id: int,
+    phone: str | None = None,
+    fio: str | None = None,
+    last_address: str | None = None,
+) -> None:
+    """Save/update user profile fields (only non-None fields are updated)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "SELECT user_id FROM user_profiles WHERE user_id = ?", (user_id,)
+        )
+        exists = await cur.fetchone()
+
+        if exists:
+            updates = []
+            values = []
+            if phone is not None:
+                updates.append("phone = ?")
+                values.append(phone)
+            if fio is not None:
+                updates.append("fio = ?")
+                values.append(fio)
+            if last_address is not None:
+                updates.append("last_address = ?")
+                values.append(last_address)
+            if updates:
+                updates.append("updated_at = CURRENT_TIMESTAMP")
+                values.append(user_id)
+                await db.execute(
+                    f"UPDATE user_profiles SET {', '.join(updates)} WHERE user_id = ?",
+                    values,
+                )
+        else:
+            await db.execute(
+                "INSERT INTO user_profiles(user_id, phone, fio, last_address) VALUES(?, ?, ?, ?)",
+                (user_id, phone or "", fio or "", last_address or ""),
+            )
+        await db.commit()

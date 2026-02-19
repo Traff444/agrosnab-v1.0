@@ -44,7 +44,10 @@ def main_menu_kb(cart_count: int = 0) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="👨‍💼 Менеджер", callback_data="info:manager"),
             ],
             [
+                InlineKeyboardButton(text="🔄 Повторить заказ", callback_data="repeat_order"),
                 InlineKeyboardButton(text="📌 Условия", callback_data="info:terms"),
+            ],
+            [
                 InlineKeyboardButton(text="🤖 AI Менеджер", callback_data="mode:ai"),
             ],
         ]
@@ -426,6 +429,20 @@ def delivery_confirm_kb() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="✅ Подтвердить", callback_data="cdek:confirm"),
                 InlineKeyboardButton(text="🔄 Изменить", callback_data="cdek:city:retry"),
             ]
+        ]
+    )
+
+
+def use_saved_kb(field: str, saved_value: str) -> InlineKeyboardMarkup:
+    """Кнопка 'Использовать сохранённое' для phone/fio/address."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"📋 {saved_value}",
+                    callback_data=f"use_saved:{field}",
+                ),
+            ],
         ]
     )
 

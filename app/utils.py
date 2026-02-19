@@ -22,9 +22,6 @@ def escape_html(text: str) -> str:
 
 
 # Phone validation regex: accepts international formats
-_PHONE_RE = re.compile(r"^\+?[0-9]{10,15}$")
-
-
 def validate_fio(fio: str) -> tuple[bool, str]:
     """
     Validate full name (ФИО).
@@ -40,15 +37,29 @@ def validate_fio(fio: str) -> tuple[bool, str]:
 
 def validate_phone(phone: str) -> tuple[bool, str]:
     """
-    Validate phone number.
-    Returns (is_valid, cleaned_phone_or_error).
+    Validate Russian phone number.
+    Accepts: +79991234567, 89991234567, 79991234567
+    Returns (is_valid, normalized_phone_or_error).
     """
     # Remove spaces, dashes, parentheses
     cleaned = re.sub(r"[\s\-\(\)]", "", phone.strip())
     if not cleaned:
         return False, "Номер телефона не указан"
-    if not _PHONE_RE.match(cleaned):
-        return False, "Некорректный формат телефона. Пример: +79991234567"
+
+    # Normalize: 8xxx -> +7xxx, 7xxx -> +7xxx
+    if cleaned.startswith("8") and len(cleaned) == 11:
+        cleaned = "+7" + cleaned[1:]
+    elif cleaned.startswith("7") and len(cleaned) == 11:
+        cleaned = "+7" + cleaned[1:]
+    elif cleaned.startswith("+7") and len(cleaned) == 12:
+        pass  # already correct
+    else:
+        return False, "Введите номер в формате +79991234567 или 89991234567"
+
+    # Validate: +7 followed by 10 digits
+    if not re.match(r"^\+7[0-9]{10}$", cleaned):
+        return False, "Введите номер в формате +79991234567 или 89991234567"
+
     return True, cleaned
 
 

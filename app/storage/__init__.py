@@ -18,9 +18,13 @@ from .cart import (
     get_cart,
     get_cart_count,
     get_cart_items_count,
+    get_last_user_order,
     get_or_create_checkout_session,
+    get_user_profile,
     mark_checkout_complete,
     remove_from_cart,
+    save_user_order,
+    save_user_profile,
     set_qty,
 )
 from .chat_history import (
@@ -80,6 +84,10 @@ __all__ = [
     "get_or_create_checkout_session",
     "mark_checkout_complete",
     "cleanup_old_checkout_sessions",
+    "get_user_profile",
+    "save_user_profile",
+    "save_user_order",
+    "get_last_user_order",
     # Chat history types
     "MessageRole",
     "ChatMessage",

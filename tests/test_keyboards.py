@@ -50,11 +50,11 @@ class TestMainMenuKb:
         kb = main_menu_kb()
         assert isinstance(kb, InlineKeyboardMarkup)
 
-    def test_has_five_rows(self):
+    def test_has_six_rows(self):
         from app.keyboards import main_menu_kb
 
         kb = main_menu_kb()
-        assert len(kb.inline_keyboard) == 5
+        assert len(kb.inline_keyboard) == 6
 
     def test_callback_data(self):
         from app.keyboards import main_menu_kb

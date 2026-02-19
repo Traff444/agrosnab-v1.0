@@ -152,7 +152,7 @@ class TestValidatePhone:
 
         is_valid, result = validate_phone("79991234567")
         assert is_valid is True
-        assert result == "79991234567"
+        assert result == "+79991234567"
 
     def test_valid_phone_with_spaces(self):
         from app.utils import validate_phone
@@ -182,16 +182,12 @@ class TestValidatePhone:
         assert is_valid is True
         assert result == "+79991234567"
 
-    def test_valid_international_phone(self):
+    def test_valid_phone_8_prefix(self):
         from app.utils import validate_phone
 
-        # US phone
-        is_valid, result = validate_phone("+14155551234")
+        is_valid, result = validate_phone("89991234567")
         assert is_valid is True
-
-        # UK phone
-        is_valid, result = validate_phone("+442071234567")
-        assert is_valid is True
+        assert result == "+79991234567"
 
     def test_invalid_empty_phone(self):
         from app.utils import validate_phone
@@ -212,28 +208,26 @@ class TestValidatePhone:
 
         is_valid, error = validate_phone("+7999123")
         assert is_valid is False
-        assert "Некорректный" in error
+        assert "формате" in error.lower() or "+7" in error
 
     def test_invalid_too_long(self):
         from app.utils import validate_phone
 
         is_valid, error = validate_phone("+79991234567890123")
         assert is_valid is False
-        assert "Некорректный" in error
+        assert "формате" in error.lower() or "+7" in error
 
     def test_invalid_letters(self):
         from app.utils import validate_phone
 
         is_valid, error = validate_phone("+7999abc4567")
         assert is_valid is False
-        assert "Некорректный" in error
 
     def test_invalid_special_chars(self):
         from app.utils import validate_phone
 
         is_valid, error = validate_phone("+7999!234567")
         assert is_valid is False
-        assert "Некорректный" in error
 
     def test_strips_leading_trailing_whitespace(self):
         from app.utils import validate_phone
@@ -242,48 +236,15 @@ class TestValidatePhone:
         assert is_valid is True
         assert result == "+79991234567"
 
-    def test_minimum_length_phone(self):
+    def test_rejects_non_russian_phone(self):
         from app.utils import validate_phone
 
-        # 10 digits is minimum
-        is_valid, result = validate_phone("1234567890")
-        assert is_valid is True
-
-    def test_maximum_length_phone(self):
-        from app.utils import validate_phone
-
-        # 15 digits is maximum
-        is_valid, result = validate_phone("123456789012345")
-        assert is_valid is True
+        is_valid, _ = validate_phone("+14155551234")
+        assert is_valid is False
 
     def test_error_message_contains_example(self):
         from app.utils import validate_phone
 
         is_valid, error = validate_phone("invalid")
         assert is_valid is False
-        assert "+79991234567" in error or "Пример" in error
-
-
-class TestPhoneRegex:
-    """Tests for phone validation regex pattern."""
-
-    def test_regex_pattern_exists(self):
-        from app.utils import _PHONE_RE
-
-        assert _PHONE_RE is not None
-        assert isinstance(_PHONE_RE, re.Pattern)
-
-    def test_regex_accepts_plus_prefix(self):
-        from app.utils import _PHONE_RE
-
-        assert _PHONE_RE.match("+79991234567")
-
-    def test_regex_accepts_no_plus(self):
-        from app.utils import _PHONE_RE
-
-        assert _PHONE_RE.match("79991234567")
-
-    def test_regex_rejects_letters(self):
-        from app.utils import _PHONE_RE
-
-        assert _PHONE_RE.match("7999abc4567") is None
+        assert "+79991234567" in error or "89991234567" in error

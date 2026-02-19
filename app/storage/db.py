@@ -129,4 +129,33 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_crm_messages_user ON crm_messages(user_id, created_at)"
         )
 
+        # User orders (for "repeat last order" feature)
+        await db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                order_id TEXT NOT NULL,
+                items_json TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """
+        )
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_user_orders_user ON user_orders(user_id, created_at DESC)"
+        )
+
+        # User profiles (remember phone, FIO, address between orders)
+        await db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                user_id INTEGER PRIMARY KEY,
+                phone TEXT,
+                fio TEXT,
+                last_address TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """
+        )
+
         await db.commit()

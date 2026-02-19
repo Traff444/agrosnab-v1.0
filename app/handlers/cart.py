@@ -4,30 +4,34 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime
 
-from aiogram import Dispatcher, F
+from aiogram import Bot, Dispatcher, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, FSInputFile, Message
 
 from .. import cart_store
-from ..cdek import CdekPvz, get_cdek_client
 from ..config import Settings
 from ..invoice import generate_invoice_pdf
 from ..keyboards import (
     DELIVERY_TYPE_LABELS,
-    city_select_kb,
-    delivery_confirm_kb,
     delivery_type_kb,
     main_menu_kb,
     order_confirm_kb,
-    pvz_select_kb,
+    use_saved_kb,
 )
 from ..services import CartService, ProductService
 from ..sheets import SheetsClient, retry_async
-from ..storage.cart import generate_sequential_order_id
+from ..storage.cart import (
+    generate_sequential_order_id,
+    get_last_user_order,
+    get_user_profile,
+    save_user_order,
+    save_user_profile,
+)
 from ..utils import escape_html, validate_fio, validate_phone
 
 logger = logging.getLogger(__name__)
@@ -37,13 +41,53 @@ class CheckoutState(StatesGroup):
     phone = State()
     fio = State()
     delivery_type = State()
-    city_input = State()
-    city_select = State()
-    pvz_select = State()
-    address_input = State()  # Почта России
+    address_input = State()  # СДЭК / Почта России
     courier_address = State()  # Курьер
-    delivery_manual = State()  # fallback or manual entry
     confirm = State()  # order confirmation before payment
+
+
+OWNER_IDS = [int(x) for x in os.environ.get("OWNER_TELEGRAM_IDS", "").split(",") if x.strip()]
+OWNER_BOT_TOKEN = os.environ.get("OWNER_BOT_TOKEN", "")
+
+
+async def _notify_owners(
+    order_id: str,
+    buyer_name: str,
+    buyer_phone: str,
+    delivery_label: str,
+    delivery_address: str,
+    total: int,
+    cart_items: list[tuple[str, int]],
+    products_by_sku: dict,
+) -> None:
+    """Send new order notification to owners via the owner bot."""
+    if not OWNER_BOT_TOKEN or not OWNER_IDS:
+        logger.warning("Owner notification skipped: no OWNER_BOT_TOKEN or OWNER_TELEGRAM_IDS")
+        return
+
+    items_text = "\n".join(
+        f"  - {products_by_sku.get(sku, {}).get('name', sku)} x{qty}"
+        for sku, qty in cart_items
+    )
+    text = (
+        f"🔔 <b>Новый заказ!</b>\n\n"
+        f"📋 {order_id}\n"
+        f"👤 {escape_html(buyer_name)}\n"
+        f"📞 {buyer_phone}\n"
+        f"💰 <b>{total:,} ₽</b>\n"
+        f"📦 {delivery_label}\n"
+        f"📍 {escape_html(delivery_address)}\n\n"
+        f"<b>Товары:</b>\n{items_text}"
+    )
+    owner_bot = Bot(token=OWNER_BOT_TOKEN)
+    try:
+        for owner_id in OWNER_IDS:
+            try:
+                await owner_bot.send_message(owner_id, text, parse_mode="HTML")
+            except Exception as e:
+                logger.warning("Failed to notify owner %s: %s", owner_id, e)
+    finally:
+        await owner_bot.session.close()
 
 
 def register_cart_handlers(
@@ -111,6 +155,7 @@ def register_cart_handlers(
             )
 
         out_pdf = f"/app/data/invoices/{invoice_no}.pdf"
+        os.makedirs(os.path.dirname(out_pdf), exist_ok=True)
         generate_invoice_pdf(
             out_pdf,
             invoice_no=invoice_no,
@@ -213,9 +258,53 @@ def register_cart_handlers(
         )
         await message.answer(thank_you, parse_mode="HTML", reply_markup=main_menu_kb())
 
+        # Save user profile and order history for next order
+        await save_user_profile(user_id, phone=buyer_phone, fio=buyer_name, last_address=delivery)
+        await save_user_order(user_id, order_id, cart_items)
+
+        # Notify owners about new order (via owner bot)
+        await _notify_owners(
+            order_id, buyer_name, buyer_phone,
+            delivery_type_label, delivery, total, cart_items, products_by_sku,
+        )
+
         await cart_store.clear_cart(user_id)
         await cart_store.cleanup_old_checkout_sessions(user_id)
         await state.clear()
+
+    @dp.callback_query(F.data == "repeat_order")
+    async def repeat_order(cb: CallbackQuery):
+        user_id = cb.from_user.id
+        last_items = await get_last_user_order(user_id)
+        if not last_items:
+            await cb.answer("У вас пока нет заказов", show_alert=True)
+            return
+
+        products_by_sku = product_service.get_products_by_sku()
+        added = []
+        skipped = []
+        for sku, qty in last_items:
+            p = products_by_sku.get(sku)
+            if not p or int(p.get("stock", 0)) <= 0:
+                skipped.append(sku)
+                continue
+            available = int(p.get("stock", 0))
+            actual_qty = min(qty, available)
+            await cart_store.add_to_cart(user_id, sku, actual_qty)
+            added.append((p["name"], actual_qty))
+
+        if not added:
+            await cb.answer("Товары из прошлого заказа закончились", show_alert=True)
+            return
+
+        lines = [f"  {name} x{qty}" for name, qty in added]
+        text = "🔄 <b>Добавлено из прошлого заказа:</b>\n" + "\n".join(lines)
+        if skipped:
+            text += f"\n\n⚠️ Нет в наличии: {len(skipped)} шт."
+        text += "\n\nОткройте корзину для оформления."
+
+        await cb.message.answer(text, parse_mode="HTML", reply_markup=main_menu_kb())
+        await cb.answer()
 
     @dp.message(F.text == "🧺 Корзина")
     async def text_cart(m: Message):
@@ -335,10 +424,12 @@ def register_cart_handlers(
 
     @dp.callback_query(F.data == "checkout:start")
     async def checkout_start(cb: CallbackQuery, state: FSMContext):
-        # Parallel fetch: cart items and summary for min check
-        cart_items, summary = await asyncio.gather(
-            cart_store.get_cart(cb.from_user.id),
-            cart_service.get_cart_summary(cb.from_user.id),
+        user_id = cb.from_user.id
+        # Parallel fetch: cart items, summary, saved profile
+        cart_items, summary, profile = await asyncio.gather(
+            cart_store.get_cart(user_id),
+            cart_service.get_cart_summary(user_id),
+            get_user_profile(user_id),
         )
 
         if not cart_items:
@@ -351,7 +442,24 @@ def register_cart_handlers(
             return
 
         await state.set_state(CheckoutState.phone)
-        await cb.message.answer("Введите номер телефона (пример: +79990000000):")
+        msg = "📞 Введите номер телефона (пример: +79990000000):"
+        kb = None
+        if profile.get("phone"):
+            kb = use_saved_kb("phone", profile["phone"])
+            msg += f"\n\nИли используйте сохранённый:"
+        await cb.message.answer(msg, reply_markup=kb)
+        await cb.answer()
+
+    @dp.callback_query(F.data == "use_saved:phone")
+    async def use_saved_phone(cb: CallbackQuery, state: FSMContext):
+        user_id = cb.from_user.id
+        profile = await get_user_profile(user_id)
+        phone = profile.get("phone", "")
+        if not phone:
+            await cb.answer("Нет сохранённого номера")
+            return
+        await state.update_data(phone=phone)
+        await _after_phone(user_id, phone, cb.message, state)
         await cb.answer()
 
     @dp.message(CheckoutState.phone)
@@ -361,27 +469,41 @@ def register_cart_handlers(
         is_valid, result = validate_phone(raw_phone)
         if not is_valid:
             await m.answer(f"❌ {result}\nПопробуйте ещё раз:")
-            return  # Stay in phone state
-        phone = result
-        await state.update_data(phone=phone)
+            return
+        await state.update_data(phone=result)
+        await _after_phone(user_id, result, m, state)
 
-        # CRM: Log checkout_started event
+    async def _after_phone(user_id: int, phone: str, message: Message, state: FSMContext):
+        """Common logic after phone is set — CRM + ask FIO."""
         await cart_store.log_crm_event(
-            user_id,
-            "checkout_started",
-            {
-                "phone": phone[:4] + "***" + phone[-2:] if len(phone) > 6 else "***",  # masked
-            },
+            user_id, "checkout_started",
+            {"phone": phone[:4] + "***" + phone[-2:] if len(phone) > 6 else "***"},
         )
-
-        # CRM: Update lead stage to checkout and save phone
         try:
             await sheets_client.upsert_lead(user_id, stage="checkout", phone=phone)
         except Exception as e:
             logger.warning("Failed to update lead %s: %s", user_id, e)
 
+        profile = await get_user_profile(user_id)
         await state.set_state(CheckoutState.fio)
-        await m.answer("👤 Введите ФИО получателя:")
+        msg = "👤 Введите ФИО получателя:"
+        kb = None
+        if profile.get("fio"):
+            kb = use_saved_kb("fio", profile["fio"])
+            msg += "\n\nИли используйте сохранённое:"
+        await message.answer(msg, reply_markup=kb)
+
+    @dp.callback_query(F.data == "use_saved:fio")
+    async def use_saved_fio(cb: CallbackQuery, state: FSMContext):
+        profile = await get_user_profile(cb.from_user.id)
+        fio = profile.get("fio", "")
+        if not fio:
+            await cb.answer("Нет сохранённого ФИО")
+            return
+        await state.update_data(buyer_name=fio)
+        await state.set_state(CheckoutState.delivery_type)
+        await cb.message.answer("📦 Выберите способ доставки:", reply_markup=delivery_type_kb())
+        await cb.answer()
 
     @dp.message(CheckoutState.fio)
     async def checkout_fio(m: Message, state: FSMContext):
@@ -417,50 +539,83 @@ def register_cart_handlers(
                 state,
             )
         elif dtype == "cdek_pvz":
-            cdek_client = get_cdek_client()
-            if not cdek_client:
-                await state.set_state(CheckoutState.delivery_manual)
-                await cb.message.answer(
-                    "СДЭК сейчас недоступен. Введите адрес доставки текстом:"
-                )
-            else:
-                await state.set_state(CheckoutState.city_input)
-                await cb.message.answer("🏙 Введите город (пример: Москва):")
+            profile = await get_user_profile(cb.from_user.id)
+            await state.set_state(CheckoutState.address_input)
+            msg = (
+                "📦 Доставка в ПВЗ СДЭК.\n"
+                "Введите полный адрес с индексом\n"
+                "(пример: 101000, г. Москва, ул. Мясницкая, д. 1):"
+            )
+            kb = None
+            if profile.get("last_address"):
+                kb = use_saved_kb("address", profile["last_address"][:40] + ("..." if len(profile["last_address"]) > 40 else ""))
+                msg += "\n\nИли используйте сохранённый:"
+            await cb.message.answer(msg, reply_markup=kb)
             await cb.answer()
         elif dtype == "pochta":
+            profile = await get_user_profile(cb.from_user.id)
             await state.set_state(CheckoutState.address_input)
-            await cb.message.answer(
+            msg = (
                 "📮 Введите полный почтовый адрес с индексом\n"
                 "(пример: 101000, г. Москва, ул. Мясницкая, д. 1, кв. 10):"
             )
+            kb = None
+            if profile.get("last_address"):
+                kb = use_saved_kb("address", profile["last_address"][:40] + ("..." if len(profile["last_address"]) > 40 else ""))
+                msg += "\n\nИли используйте сохранённый:"
+            await cb.message.answer(msg, reply_markup=kb)
             await cb.answer()
         elif dtype == "courier":
+            profile = await get_user_profile(cb.from_user.id)
             await state.set_state(CheckoutState.courier_address)
-            await cb.message.answer(
+            msg = (
                 "🚗 Курьерская доставка (Москва/МО, СПб/Ленобласть).\n"
                 "Введите полный адрес доставки:"
             )
+            kb = None
+            if profile.get("last_address"):
+                kb = use_saved_kb("address", profile["last_address"][:40] + ("..." if len(profile["last_address"]) > 40 else ""))
+                msg += "\n\nИли используйте сохранённый:"
+            await cb.message.answer(msg, reply_markup=kb)
             await cb.answer()
         else:
             await cb.answer("Неизвестный тип доставки", show_alert=True)
 
+    @dp.callback_query(F.data == "use_saved:address")
+    async def use_saved_address(cb: CallbackQuery, state: FSMContext):
+        profile = await get_user_profile(cb.from_user.id)
+        address = profile.get("last_address", "")
+        if not address:
+            await cb.answer("Нет сохранённого адреса")
+            return
+        data = await state.get_data()
+        dtype = data.get("delivery_type", "pochta")
+        label = DELIVERY_TYPE_LABELS.get(dtype, dtype).split(" ", 1)[-1]
+        delivery = f"{label}: {address}"
+        await cb.answer()
+        await show_order_confirmation(
+            cb.from_user.id,
+            data.get("phone", ""),
+            data.get("buyer_name", ""),
+            dtype, delivery, cb.message, state,
+        )
+
     @dp.message(CheckoutState.address_input)
-    async def checkout_pochta_address(m: Message, state: FSMContext):
+    async def checkout_address_input(m: Message, state: FSMContext):
         address = (m.text or "").strip()
         if len(address) < 10:
             await m.answer("⚠️ Адрес слишком короткий. Укажите полный адрес с индексом:")
             return
 
-        delivery = f"Почта России: {address}"
         data = await state.get_data()
+        dtype = data.get("delivery_type", "pochta")
+        label = DELIVERY_TYPE_LABELS.get(dtype, dtype).split(" ", 1)[-1]
+        delivery = f"{label}: {address}"
         await show_order_confirmation(
             m.from_user.id,
             data.get("phone", ""),
             data.get("buyer_name", ""),
-            data.get("delivery_type", "pochta"),
-            delivery,
-            m,
-            state,
+            dtype, delivery, m, state,
         )
 
     @dp.message(CheckoutState.courier_address)
@@ -481,172 +636,6 @@ def register_cart_handlers(
             m,
             state,
         )
-
-    @dp.message(CheckoutState.delivery_manual)
-    async def checkout_delivery_manual(m: Message, state: FSMContext):
-        data = await state.get_data()
-        phone = str(data.get("phone", "")).strip()
-        buyer_name = str(data.get("buyer_name", "")).strip()
-        delivery_type_val = data.get("delivery_type", "cdek_pvz")
-        delivery = (m.text or "").strip()
-
-        # Validate delivery address
-        if len(delivery) < 5:
-            await m.answer("⚠️ Адрес слишком короткий. Введите полный адрес доставки:")
-            return
-
-        await show_order_confirmation(
-            m.from_user.id, phone, buyer_name, delivery_type_val, delivery, m, state
-        )
-
-    @dp.message(CheckoutState.city_input)
-    async def cdek_city_input(m: Message, state: FSMContext):
-        q = (m.text or "").strip()
-        if q.lower() in {"вручную", "manual"}:
-            await state.set_state(CheckoutState.delivery_manual)
-            await m.answer("Ок. Введите доставку/город/ПВЗ текстом:")
-            return
-
-        cdek_client = get_cdek_client()
-        if not cdek_client:
-            await state.set_state(CheckoutState.delivery_manual)
-            await m.answer("СДЭК сейчас недоступен. Введите доставку/город/ПВЗ текстом:")
-            return
-
-        cities = await cdek_client.search_cities(q, limit=10)
-        if not cities:
-            await m.answer(
-                "Не нашёл город. Попробуйте ещё раз (пример: Москва) или напишите «вручную»."
-            )
-            return
-
-        city_items = [(c.code, c.display_name()) for c in cities if c.code]
-        await state.update_data(cdek_cities=city_items)
-        await state.set_state(CheckoutState.city_select)
-        await m.answer("Выберите город:", reply_markup=city_select_kb(city_items))
-
-    @dp.callback_query(F.data == "cdek:city:retry")
-    async def cdek_retry_city(cb: CallbackQuery, state: FSMContext):
-        await state.set_state(CheckoutState.city_input)
-        await cb.message.answer("Введите город (пример: Москва).")
-        await cb.answer()
-
-    @dp.callback_query(F.data == "cdek:manual")
-    async def cdek_manual(cb: CallbackQuery, state: FSMContext):
-        await state.set_state(CheckoutState.delivery_manual)
-        await cb.message.answer("Введите доставку/город/ПВЗ (текстом):")
-        await cb.answer()
-
-    @dp.callback_query(F.data.startswith("cdek:city:"))
-    async def cdek_city_selected(cb: CallbackQuery, state: FSMContext):
-        if cb.data == "cdek:city:retry":
-            # This callback has its own dedicated handler above.
-            await cb.answer()
-            return
-        # cdek:city:{city_code}
-        try:
-            city_code = int(cb.data.split(":")[2])
-        except Exception:
-            await cb.answer("Некорректный город", show_alert=True)
-            return
-
-        cdek_client = get_cdek_client()
-        if not cdek_client:
-            await state.set_state(CheckoutState.delivery_manual)
-            await cb.message.answer("СДЭК сейчас недоступен. Введите доставку/город/ПВЗ текстом:")
-            await cb.answer()
-            return
-
-        pvz = await cdek_client.get_pvz_list(city_code, limit=50)
-        if not pvz:
-            await cb.message.answer(
-                "В этом городе не нашёл ПВЗ. Попробуйте другой город или «вручную»."
-            )
-            await cb.answer()
-            return
-
-        pvz_map: dict[str, dict] = {}
-        pvz_items: list[tuple[str, str]] = []
-        for p in pvz:
-            if not p.code:
-                continue
-            pvz_map[p.code] = {
-                "code": p.code,
-                "name": p.name,
-                "address": p.address,
-                "city": p.city,
-                "work_time": p.work_time,
-                "nearest_metro": p.nearest_metro,
-            }
-            pvz_items.append((p.code, p.display_name()))
-
-        await state.update_data(
-            cdek_city_code=city_code, cdek_pvz_map=pvz_map, cdek_pvz_items=pvz_items
-        )
-        await state.set_state(CheckoutState.pvz_select)
-        await cb.message.answer(
-            "Выберите ПВЗ:", reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=0)
-        )
-        await cb.answer()
-
-    @dp.callback_query(F.data.startswith("cdek:pvz_page:"))
-    async def cdek_pvz_page(cb: CallbackQuery, state: FSMContext):
-        # cdek:pvz_page:{city_code}:{page}
-        parts = cb.data.split(":")
-        if len(parts) != 4:
-            await cb.answer()
-            return
-        try:
-            city_code = int(parts[2])
-            page = int(parts[3])
-        except Exception:
-            await cb.answer()
-            return
-
-        data = await state.get_data()
-        pvz_items = data.get("cdek_pvz_items", [])
-        if not pvz_items:
-            await cb.answer("Список ПВЗ не найден. Начните заново.", show_alert=True)
-            await state.set_state(CheckoutState.city_input)
-            return
-
-        try:
-            await cb.message.edit_reply_markup(
-                reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=page)
-            )
-        except TelegramBadRequest as e:
-            logger.debug("Cannot edit PVZ markup: %s", e)
-            await cb.message.answer(
-                "Выберите ПВЗ:",
-                reply_markup=pvz_select_kb(pvz_items, city_code=city_code, page=page),
-            )
-        await cb.answer()
-
-    @dp.callback_query(F.data.startswith("cdek:pvz:"))
-    async def cdek_pvz_selected(cb: CallbackQuery, state: FSMContext):
-        # cdek:pvz:{pvz_code}
-        pvz_code = cb.data.split(":")[2] if cb.data else ""
-        data = await state.get_data()
-        pvz_map = data.get("cdek_pvz_map", {}) or {}
-        pvz_data = pvz_map.get(pvz_code)
-        if not pvz_data:
-            await cb.answer("ПВЗ не найден. Попробуйте ещё раз.", show_alert=True)
-            return
-
-        await state.update_data(cdek_selected_pvz=pvz_data)
-
-        pvz_obj = CdekPvz(
-            code=pvz_data.get("code", ""),
-            name=pvz_data.get("name", ""),
-            address=pvz_data.get("address", ""),
-            city=pvz_data.get("city", ""),
-            work_time=pvz_data.get("work_time", ""),
-            nearest_metro=pvz_data.get("nearest_metro"),
-        )
-        await cb.message.answer(
-            f"Проверьте ПВЗ:\n\n{pvz_obj.full_display()}", reply_markup=delivery_confirm_kb()
-        )
-        await cb.answer()
 
     async def show_order_confirmation(
         user_id: int,
@@ -684,25 +673,6 @@ def register_cart_handlers(
         )
         await state.set_state(CheckoutState.confirm)
         await message.answer(text, parse_mode="HTML", reply_markup=order_confirm_kb())
-
-    @dp.callback_query(F.data == "cdek:confirm")
-    async def cdek_confirm(cb: CallbackQuery, state: FSMContext):
-        data = await state.get_data()
-        phone = str(data.get("phone", "")).strip()
-        buyer_name = str(data.get("buyer_name", "")).strip()
-        pvz_data = data.get("cdek_selected_pvz")
-        if not pvz_data:
-            await cb.answer("Сначала выберите ПВЗ", show_alert=True)
-            return
-
-        address = str(pvz_data.get("address", "")).strip()
-        code = str(pvz_data.get("code", "")).strip()
-        delivery = f"ПВЗ СДЭК: {address} ({code})" if code else f"ПВЗ СДЭК: {address}"
-
-        await cb.answer()
-        await show_order_confirmation(
-            cb.from_user.id, phone, buyer_name, "cdek_pvz", delivery, cb.message, state
-        )
 
     @dp.callback_query(F.data == "checkout:final")
     async def checkout_final(cb: CallbackQuery, state: FSMContext):
