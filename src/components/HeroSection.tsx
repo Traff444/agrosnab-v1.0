@@ -84,7 +84,7 @@ export function HeroSection() {
           {/* pills */}
           <div className="space-y-3">
             {[
-              "Минимальные партии от 25 кг",
+              "Заказ от 1 000 ₽ с оплатой при получении",
               "Стабильное наличие и объёмы",
               "Работа с оптовыми компаниями и магазинами",
             ].map((t) => (
@@ -165,7 +165,7 @@ export function HeroSection() {
             {/* Desktop: 3 преимущества остаются рядом с текстом (в верхней зоне) */}
             <ul className="hidden lg:block mt-5 space-y-3">
               {[
-                "Минимальные партии от 25 кг",
+                "Заказ от 1 000 ₽ с оплатой при получении",
                 "Стабильное наличие и объёмы",
                 "Работа с оптовыми компаниями и магазинами",
               ].map((t) => (
@@ -194,7 +194,7 @@ export function HeroSection() {
           <div className="max-w-[520px] pb-6 lg:pb-8">
             {/* Mobile: 2 преимущества рядом с CTA */}
             <ul className="mb-3 space-y-2 lg:hidden">
-              {["Минимальные партии от 25 кг", "Стабильное наличие и объёмы"].map((t) => (
+              {["Заказ от 1 000 ₽ с оплатой при получении", "Стабильное наличие и объёмы"].map((t) => (
                 <li key={t} className="flex items-start gap-3 text-white/90">
                   <span className="mt-[2px] inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/35 bg-white/5">
                     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
