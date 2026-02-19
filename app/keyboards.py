@@ -36,11 +36,80 @@ def main_menu_kb(cart_count: int = 0) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="📋 Категории", callback_data="categories"),
             ],
             [
-                InlineKeyboardButton(text="🤖 Менеджер", callback_data="mode:ai"),
+                InlineKeyboardButton(text="🚚 Доставка", callback_data="info:delivery"),
+                InlineKeyboardButton(text="💳 Оплата", callback_data="info:payment"),
+            ],
+            [
+                InlineKeyboardButton(text="🏪 Самовывоз", callback_data="info:pickup"),
+                InlineKeyboardButton(text="👨‍💼 Менеджер", callback_data="info:manager"),
+            ],
+            [
                 InlineKeyboardButton(text="📌 Условия", callback_data="info:terms"),
+                InlineKeyboardButton(text="🤖 AI Менеджер", callback_data="mode:ai"),
             ],
         ]
     )
+
+
+CATEGORY_SECTION_LABELS = {
+    "origin": "🌍 По происхождению",
+    "weight": "⚖️ По весу",
+}
+
+
+def structured_categories_kb(
+    structured: dict[str, list[str]],
+    legacy_categories: list[str],
+) -> InlineKeyboardMarkup:
+    """Generate keyboard with structured category buttons (origin, weight)."""
+    rows: list[list[InlineKeyboardButton]] = []
+
+    # "All products" button
+    rows.append([InlineKeyboardButton(text="📦 Все товары", callback_data="catalog:0:all")])
+
+    # Structured sections
+    for prefix in ("origin", "weight"):
+        values = structured.get(prefix, [])
+        if not values:
+            continue
+        label = CATEGORY_SECTION_LABELS.get(prefix, prefix)
+        rows.append([InlineKeyboardButton(text=f"── {label} ──", callback_data="noop")])
+        for i in range(0, len(values), 2):
+            row = [
+                InlineKeyboardButton(
+                    text=f"🔖 {values[i]}",
+                    callback_data=f"catalog:0:{prefix}:{values[i]}",
+                )
+            ]
+            if i + 1 < len(values):
+                row.append(
+                    InlineKeyboardButton(
+                        text=f"🔖 {values[i + 1]}",
+                        callback_data=f"catalog:0:{prefix}:{values[i + 1]}",
+                    )
+                )
+            rows.append(row)
+
+    # Legacy categories (if any tags without prefix)
+    legacy_only = [c for c in legacy_categories if ":" not in c]
+    if legacy_only:
+        for i in range(0, len(legacy_only), 2):
+            row = [
+                InlineKeyboardButton(
+                    text=f"🔖 {legacy_only[i]}", callback_data=f"catalog:0:{legacy_only[i]}"
+                )
+            ]
+            if i + 1 < len(legacy_only):
+                row.append(
+                    InlineKeyboardButton(
+                        text=f"🔖 {legacy_only[i + 1]}",
+                        callback_data=f"catalog:0:{legacy_only[i + 1]}",
+                    )
+                )
+            rows.append(row)
+
+    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def categories_kb(categories: list[str]) -> InlineKeyboardMarkup:
@@ -232,6 +301,41 @@ def cart_with_items_kb(items: list[tuple]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def search_results_kb(
+    products: list[dict],
+    cart_count: int = 0,
+) -> InlineKeyboardMarkup:
+    """Keyboard with clickable product buttons for search results."""
+    rows: list[list[InlineKeyboardButton]] = []
+
+    for p in products:
+        button_text = format_product_button(p, max_total=48)
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=button_text,
+                    callback_data=f"product:{p['sku']}",
+                )
+            ]
+        )
+
+    rows.append(
+        [
+            InlineKeyboardButton(text="🔎 Новый поиск", callback_data="search:start"),
+            InlineKeyboardButton(text="🗂 Каталог", callback_data="catalog:0:all"),
+        ]
+    )
+    cart_label = f"🧺 Корзина ({cart_count})" if cart_count else "🧺 Корзина"
+    rows.append(
+        [
+            InlineKeyboardButton(text=cart_label, callback_data="cart:show"),
+            InlineKeyboardButton(text="🏠 Меню", callback_data="menu"),
+        ]
+    )
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 def back_to_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[[InlineKeyboardButton(text="🏠 Меню", callback_data="menu")]]
@@ -326,6 +430,37 @@ def delivery_confirm_kb() -> InlineKeyboardMarkup:
     )
 
 
+DELIVERY_TYPE_LABELS = {
+    "pickup": "🏪 Самовывоз",
+    "cdek_pvz": "📦 ПВЗ СДЭК",
+    "pochta": "📮 Почта России",
+    "courier": "🚗 Курьер",
+}
+
+
+def delivery_type_kb() -> InlineKeyboardMarkup:
+    """Keyboard for selecting delivery type."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🏪 Самовывоз (Фуд Сити)", callback_data="delivery_type:pickup"),
+            ],
+            [
+                InlineKeyboardButton(text="📦 ПВЗ СДЭК", callback_data="delivery_type:cdek_pvz"),
+            ],
+            [
+                InlineKeyboardButton(text="📮 Почта России", callback_data="delivery_type:pochta"),
+            ],
+            [
+                InlineKeyboardButton(text="🚗 Курьер (Москва/МО, СПб)", callback_data="delivery_type:courier"),
+            ],
+            [
+                InlineKeyboardButton(text="❌ Отмена", callback_data="cart:show"),
+            ],
+        ]
+    )
+
+
 def order_confirm_kb() -> InlineKeyboardMarkup:
     """Клавиатура финального подтверждения заказа."""
     return InlineKeyboardMarkup(
@@ -335,8 +470,13 @@ def order_confirm_kb() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
+                    text="✏️ Изменить ФИО", callback_data="checkout:edit:fio"
+                ),
+                InlineKeyboardButton(
                     text="✏️ Изменить телефон", callback_data="checkout:edit:phone"
                 ),
+            ],
+            [
                 InlineKeyboardButton(
                     text="📍 Изменить доставку", callback_data="checkout:edit:delivery"
                 ),

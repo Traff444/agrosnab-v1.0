@@ -30,6 +30,7 @@ def generate_invoice_pdf(
     invoice_date: str,
     seller: dict[str, Any],
     buyer_phone: str,
+    buyer_name: str = "",
     delivery: str,
     items: list[tuple[str, str, int, int]],  # sku, name, qty, price
 ) -> None:
@@ -57,7 +58,10 @@ def generate_invoice_pdf(
     y -= 22
 
     c.setFont(font, 10)
-    c.drawString(50, y, f"Покупатель (телефон): {buyer_phone}")
+    if buyer_name:
+        c.drawString(50, y, f"Покупатель: {buyer_name}")
+        y -= 14
+    c.drawString(50, y, f"Телефон: {buyer_phone}")
     y -= 14
     c.drawString(50, y, f"Доставка: {delivery}")
     y -= 22

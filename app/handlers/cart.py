@@ -17,24 +17,31 @@ from ..cdek import CdekPvz, get_cdek_client
 from ..config import Settings
 from ..invoice import generate_invoice_pdf
 from ..keyboards import (
+    DELIVERY_TYPE_LABELS,
     city_select_kb,
     delivery_confirm_kb,
+    delivery_type_kb,
     main_menu_kb,
     order_confirm_kb,
     pvz_select_kb,
 )
 from ..services import CartService, ProductService
 from ..sheets import SheetsClient, retry_async
-from ..utils import escape_html, make_order_id, validate_phone
+from ..storage.cart import generate_sequential_order_id
+from ..utils import escape_html, validate_fio, validate_phone
 
 logger = logging.getLogger(__name__)
 
 
 class CheckoutState(StatesGroup):
     phone = State()
+    fio = State()
+    delivery_type = State()
     city_input = State()
     city_select = State()
     pvz_select = State()
+    address_input = State()  # Почта России
+    courier_address = State()  # Курьер
     delivery_manual = State()  # fallback or manual entry
     confirm = State()  # order confirmation before payment
 
@@ -47,9 +54,13 @@ def register_cart_handlers(
 ) -> None:
     """Register cart and checkout handlers."""
 
+    cfg = Settings()
+
     async def finalize_checkout(
         user_id: int,
         buyer_phone: str,
+        buyer_name: str,
+        delivery_type: str,
         delivery: str,
         message: Message,
         state: FSMContext,
@@ -72,7 +83,7 @@ def register_cart_handlers(
         order_id, _ = await cart_store.get_or_create_checkout_session(
             user_id,
             cart_items,
-            lambda: make_order_id("ORD"),
+            lambda: generate_sequential_order_id(user_id),
         )
         invoice_no = order_id
         invoice_date = datetime.now().strftime("%Y-%m-%d")
@@ -92,7 +103,7 @@ def register_cart_handlers(
                     sku,
                     qty,
                     "",
-                    "Тест",
+                    buyer_name or buyer_phone,
                     invoice_no,
                     order_id,
                     "Авто-списание после счета",
@@ -106,34 +117,36 @@ def register_cart_handlers(
             invoice_date=invoice_date,
             seller=seller,
             buyer_phone=buyer_phone,
+            buyer_name=buyer_name,
             delivery=delivery,
             items=items_for_pdf,
         )
 
         # write order to sheet (async with retry)
+        delivery_type_label = DELIVERY_TYPE_LABELS.get(delivery_type, delivery_type)
         order_row = [
             order_id,
             datetime.now().strftime("%Y-%m-%d %H:%M"),
             str(user_id),
             buyer_phone,
-            "Счет выставлен",
+            "Новый",
             total,
-            "СДЭК",
+            delivery_type_label,
             delivery,
             "; ".join([f"{sku}:{qty}" for sku, qty in cart_items]),
             f"{invoice_no}.pdf",
+            buyer_name,
         ]
 
         try:
             await retry_async(sheets_client.append_order, order_row)
 
             # optional spisanie (async with retry)
-            cfg = Settings()
             if cfg.auto_write_spisanie:
                 await retry_async(sheets_client.append_spisanie_rows, spisanie_rows)
                 # Update stock in Склад sheet (now async with batch update)
                 await retry_async(
-                    sheets_client.decrease_stock, [(sku, qty) for sku, qty in cart_items]
+                    sheets_client.decrease_stock, cart_items
                 )
                 # Invalidate cache after stock update
                 product_service.invalidate_cache()
@@ -190,11 +203,12 @@ def register_cart_handlers(
         thank_you = (
             f"🎉 <b>Спасибо за заказ!</b>\n\n"
             f"📋 Номер заказа: <code>{order_id}</code>\n"
-            f"💰 Сумма: <b>{total:,} ₽</b>\n\n"
-            f"📦 <b>Что дальше:</b>\n"
-            f"1. Оплатите счёт (PDF выше)\n"
-            f"2. Мы подготовим ваш заказ\n"
-            f"3. Доставим в указанное место\n\n"
+            f"👤 ФИО: {escape_html(buyer_name)}\n"
+            f"💰 Сумма: <b>{total:,} ₽</b>\n"
+            f"📦 Доставка: {delivery_type_label}\n\n"
+            f"<b>Что дальше:</b>\n"
+            f"1. Мы подготовим ваш заказ\n"
+            f"2. Оплата при получении\n\n"
             f"❓ Вопросы? Напишите нам!"
         )
         await message.answer(thank_you, parse_mode="HTML", reply_markup=main_menu_kb())
@@ -364,24 +378,116 @@ def register_cart_handlers(
         try:
             await sheets_client.upsert_lead(user_id, stage="checkout", phone=phone)
         except Exception as e:
-            logger.warning(f"Failed to update lead {user_id}: {e}")
-        cdek_client = get_cdek_client()
-        # Если клиент СДЭК недоступен — идём по старой схеме (ручной ввод)
-        # В demo mode клиент будет доступен даже без реальных кредов.
-        if not cdek_client:
-            await state.set_state(CheckoutState.delivery_manual)
-            await m.answer(
-                "Введите доставку/город/ПВЗ (текстом, например: «СДЭК, Москва, ПВЗ Тверская 7»):"
-            )
+            logger.warning("Failed to update lead %s: %s", user_id, e)
+
+        await state.set_state(CheckoutState.fio)
+        await m.answer("👤 Введите ФИО получателя:")
+
+    @dp.message(CheckoutState.fio)
+    async def checkout_fio(m: Message, state: FSMContext):
+        raw_fio = (m.text or "").strip()
+        is_valid, result = validate_fio(raw_fio)
+        if not is_valid:
+            await m.answer(f"❌ {result}\nПопробуйте ещё раз:")
             return
 
-        await state.set_state(CheckoutState.city_input)
-        await m.answer("Введите город (пример: Москва).")
+        await state.update_data(buyer_name=result)
+        await state.set_state(CheckoutState.delivery_type)
+        await m.answer("📦 Выберите способ доставки:", reply_markup=delivery_type_kb())
+
+    @dp.callback_query(F.data.startswith("delivery_type:"))
+    async def delivery_type_selected(cb: CallbackQuery, state: FSMContext):
+        dtype = cb.data.split(":")[1]
+        await state.update_data(delivery_type=dtype)
+
+        if dtype == "pickup":
+            delivery = (
+                "Самовывоз: Фуд Сити, м. Корниловская, "
+                "вход 2/3, этаж 2, линия 22, пав. 60, «Табачный мир», 10:00-17:00"
+            )
+            data = await state.get_data()
+            await cb.answer()
+            await show_order_confirmation(
+                cb.from_user.id,
+                data.get("phone", ""),
+                data.get("buyer_name", ""),
+                dtype,
+                delivery,
+                cb.message,
+                state,
+            )
+        elif dtype == "cdek_pvz":
+            cdek_client = get_cdek_client()
+            if not cdek_client:
+                await state.set_state(CheckoutState.delivery_manual)
+                await cb.message.answer(
+                    "СДЭК сейчас недоступен. Введите адрес доставки текстом:"
+                )
+            else:
+                await state.set_state(CheckoutState.city_input)
+                await cb.message.answer("🏙 Введите город (пример: Москва):")
+            await cb.answer()
+        elif dtype == "pochta":
+            await state.set_state(CheckoutState.address_input)
+            await cb.message.answer(
+                "📮 Введите полный почтовый адрес с индексом\n"
+                "(пример: 101000, г. Москва, ул. Мясницкая, д. 1, кв. 10):"
+            )
+            await cb.answer()
+        elif dtype == "courier":
+            await state.set_state(CheckoutState.courier_address)
+            await cb.message.answer(
+                "🚗 Курьерская доставка (Москва/МО, СПб/Ленобласть).\n"
+                "Введите полный адрес доставки:"
+            )
+            await cb.answer()
+        else:
+            await cb.answer("Неизвестный тип доставки", show_alert=True)
+
+    @dp.message(CheckoutState.address_input)
+    async def checkout_pochta_address(m: Message, state: FSMContext):
+        address = (m.text or "").strip()
+        if len(address) < 10:
+            await m.answer("⚠️ Адрес слишком короткий. Укажите полный адрес с индексом:")
+            return
+
+        delivery = f"Почта России: {address}"
+        data = await state.get_data()
+        await show_order_confirmation(
+            m.from_user.id,
+            data.get("phone", ""),
+            data.get("buyer_name", ""),
+            data.get("delivery_type", "pochta"),
+            delivery,
+            m,
+            state,
+        )
+
+    @dp.message(CheckoutState.courier_address)
+    async def checkout_courier_address(m: Message, state: FSMContext):
+        address = (m.text or "").strip()
+        if len(address) < 10:
+            await m.answer("⚠️ Адрес слишком короткий. Укажите полный адрес:")
+            return
+
+        delivery = f"Курьер: {address}"
+        data = await state.get_data()
+        await show_order_confirmation(
+            m.from_user.id,
+            data.get("phone", ""),
+            data.get("buyer_name", ""),
+            data.get("delivery_type", "courier"),
+            delivery,
+            m,
+            state,
+        )
 
     @dp.message(CheckoutState.delivery_manual)
     async def checkout_delivery_manual(m: Message, state: FSMContext):
         data = await state.get_data()
         phone = str(data.get("phone", "")).strip()
+        buyer_name = str(data.get("buyer_name", "")).strip()
+        delivery_type_val = data.get("delivery_type", "cdek_pvz")
         delivery = (m.text or "").strip()
 
         # Validate delivery address
@@ -389,7 +495,9 @@ def register_cart_handlers(
             await m.answer("⚠️ Адрес слишком короткий. Введите полный адрес доставки:")
             return
 
-        await show_order_confirmation(m.from_user.id, phone, delivery, m, state)
+        await show_order_confirmation(
+            m.from_user.id, phone, buyer_name, delivery_type_val, delivery, m, state
+        )
 
     @dp.message(CheckoutState.city_input)
     async def cdek_city_input(m: Message, state: FSMContext):
@@ -543,6 +651,8 @@ def register_cart_handlers(
     async def show_order_confirmation(
         user_id: int,
         phone: str,
+        buyer_name: str,
+        delivery_type_val: str,
         delivery: str,
         message: Message,
         state: FSMContext,
@@ -557,16 +667,21 @@ def register_cart_handlers(
 
         items_text = "\n".join(lines)
         escaped_delivery = escape_html(delivery)
+        delivery_type_label = DELIVERY_TYPE_LABELS.get(delivery_type_val, delivery_type_val)
         text = (
             "✅ <b>Подтверждение заказа</b>\n\n"
             f"📦 <b>Товары:</b>\n{items_text}\n\n"
             f"💰 <b>Итого: {total:,} ₽</b>\n\n"
+            f"👤 ФИО: {escape_html(buyer_name)}\n"
             f"📞 Телефон: <code>{phone}</code>\n"
-            f"📍 Доставка: {escaped_delivery}\n\n"
+            f"📍 Доставка ({delivery_type_label}): {escaped_delivery}\n"
+            f"💳 Оплата при получении\n\n"
             "Всё верно?"
         )
 
-        await state.update_data(phone=phone, delivery=delivery)
+        await state.update_data(
+            phone=phone, buyer_name=buyer_name, delivery_type=delivery_type_val, delivery=delivery
+        )
         await state.set_state(CheckoutState.confirm)
         await message.answer(text, parse_mode="HTML", reply_markup=order_confirm_kb())
 
@@ -574,6 +689,7 @@ def register_cart_handlers(
     async def cdek_confirm(cb: CallbackQuery, state: FSMContext):
         data = await state.get_data()
         phone = str(data.get("phone", "")).strip()
+        buyer_name = str(data.get("buyer_name", "")).strip()
         pvz_data = data.get("cdek_selected_pvz")
         if not pvz_data:
             await cb.answer("Сначала выберите ПВЗ", show_alert=True)
@@ -584,16 +700,20 @@ def register_cart_handlers(
         delivery = f"ПВЗ СДЭК: {address} ({code})" if code else f"ПВЗ СДЭК: {address}"
 
         await cb.answer()
-        await show_order_confirmation(cb.from_user.id, phone, delivery, cb.message, state)
+        await show_order_confirmation(
+            cb.from_user.id, phone, buyer_name, "cdek_pvz", delivery, cb.message, state
+        )
 
     @dp.callback_query(F.data == "checkout:final")
     async def checkout_final(cb: CallbackQuery, state: FSMContext):
         """Finalize order after user confirmation."""
         data = await state.get_data()
         phone = str(data.get("phone", "")).strip()
+        buyer_name = str(data.get("buyer_name", "")).strip()
+        delivery_type_val = str(data.get("delivery_type", "")).strip()
         delivery = str(data.get("delivery", "")).strip()
 
-        if not phone or not delivery:
+        if not phone or not delivery or not buyer_name:
             await cb.answer("Данные заказа неполны. Начните сначала.", show_alert=True)
             await state.clear()
             return
@@ -606,7 +726,16 @@ def register_cart_handlers(
             return
 
         await cb.answer()
-        await finalize_checkout(cb.from_user.id, phone, delivery, cb.message, state)
+        await finalize_checkout(
+            cb.from_user.id, phone, buyer_name, delivery_type_val, delivery, cb.message, state
+        )
+
+    @dp.callback_query(F.data == "checkout:edit:fio")
+    async def checkout_edit_fio(cb: CallbackQuery, state: FSMContext):
+        """Return to FIO input step."""
+        await state.set_state(CheckoutState.fio)
+        await cb.message.answer("👤 Введите новое ФИО получателя:")
+        await cb.answer()
 
     @dp.callback_query(F.data == "checkout:edit:phone")
     async def checkout_edit_phone(cb: CallbackQuery, state: FSMContext):
@@ -617,12 +746,7 @@ def register_cart_handlers(
 
     @dp.callback_query(F.data == "checkout:edit:delivery")
     async def checkout_edit_delivery(cb: CallbackQuery, state: FSMContext):
-        """Return to delivery selection."""
-        cdek_client = get_cdek_client()
-        if cdek_client:
-            await state.set_state(CheckoutState.city_input)
-            await cb.message.answer("📍 Введите город:")
-        else:
-            await state.set_state(CheckoutState.delivery_manual)
-            await cb.message.answer("📍 Введите адрес доставки:")
+        """Return to delivery type selection."""
+        await state.set_state(CheckoutState.delivery_type)
+        await cb.message.answer("📦 Выберите способ доставки:", reply_markup=delivery_type_kb())
         await cb.answer()

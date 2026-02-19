@@ -72,6 +72,13 @@ export function Footer() {
               >
                 +7 (916) 481-07-69
               </a>
+              <a
+                href="mailto:info@mahorkamarket.ru"
+                className="text-sm text-subtext-on-dark hover:text-color-accent hover:translate-x-1 transition-all duration-300 inline-block"
+              >
+                info@mahorkamarket.ru
+              </a>
+              <span className="text-xs text-subtext-on-dark opacity-60">По вопросам сотрудничества</span>
             </div>
           </div>
 
@@ -93,7 +100,7 @@ export function Footer() {
             для хозяйственных и технических целей.
           </p>
           <p className="text-xs md:text-sm text-subtext-on-dark text-center opacity-60">
-            © 2026 АгроСнаб. Все права защищены.
+            © {new Date().getFullYear()} АгроСнаб. Все права защищены.
           </p>
           <p className="text-xs md:text-sm text-subtext-on-dark text-center opacity-60">
             Сайт разработан командой{' '}

@@ -17,9 +17,12 @@ from ..keyboards import (
     categories_kb,
     main_menu_kb,
     product_kb,
+    search_results_kb,
+    structured_categories_kb,
 )
 from ..services import ProductService
 from ..sheets import SheetsClient
+from ..utils import escape_html
 from .common import format_product
 
 logger = logging.getLogger(__name__)
@@ -75,7 +78,13 @@ def register_catalog_handlers(
         user_id = cb.from_user.id
         parts = cb.data.split(":")
         page = int(parts[1])
-        category = parts[2] if len(parts) > 2 else "all"
+        # Support structured categories: catalog:0:origin:Россия
+        if len(parts) > 3:
+            category = ":".join(parts[2:])
+        elif len(parts) > 2:
+            category = parts[2]
+        else:
+            category = "all"
 
         # CRM: Log catalog navigation
         await cart_store.log_crm_event(
@@ -118,7 +127,14 @@ def register_catalog_handlers(
         cart_count = await cart_store.get_cart_count(user_id)
 
         # Category label for display
-        category_label = "Все товары" if category == "all" else category
+        if category == "all":
+            category_label = "Все товары"
+        elif category.startswith("origin:"):
+            category_label = f"🌍 {category.split(':', 1)[1]}"
+        elif category.startswith("weight:"):
+            category_label = f"⚖️ {category.split(':', 1)[1]}"
+        else:
+            category_label = category
 
         text = (
             f"🗂 <b>Каталог</b> • {category_label}\n\n"
@@ -136,12 +152,16 @@ def register_catalog_handlers(
 
     @dp.callback_query(F.data == "categories")
     async def show_categories(cb: CallbackQuery):
-        categories = product_service.get_categories()
-        if categories:
+        structured = product_service.get_structured_categories()
+        legacy_categories = product_service.get_categories()
+
+        if structured or legacy_categories:
             text = "📋 <b>Выберите категорию:</b>"
+            kb = structured_categories_kb(structured, legacy_categories)
         else:
             text = "📋 Категории не найдены. Добавьте теги в таблицу."
-        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=categories_kb(categories))
+            kb = categories_kb(legacy_categories)
+        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
         await cb.answer()
 
     @dp.callback_query(F.data == "search:start")
@@ -184,18 +204,18 @@ def register_catalog_handlers(
         except Exception as e:
             logger.warning("lead_update_failed", extra={"user_id": user_id, "error": str(e)})
 
-        from ..utils import escape_html
-
         escaped_query = escape_html(query)
         if found:
-            text = f"🔍 <b>Результаты поиска:</b> «{escaped_query}»\n\n"
-            text += "\n\n".join([format_product(p, compact=True) for p in found[:10]])
+            cart_count = await cart_store.get_cart_count(user_id)
+            text = f"🔍 <b>Результаты поиска:</b> «{escaped_query}»\n\nВыберите товар:"
             if len(found) > 10:
-                text += f"\n\n<i>...и ещё {len(found) - 10} товаров</i>"
+                text += f"\n<i>(показаны первые 10 из {len(found)})</i>"
+            kb = search_results_kb(found[:10], cart_count=cart_count)
         else:
             text = f"🔍 Ничего не найдено по запросу «{escaped_query}»"
+            kb = back_to_menu_kb()
 
-        await m.answer(text, parse_mode="HTML", reply_markup=back_to_menu_kb())
+        await m.answer(text, parse_mode="HTML", reply_markup=kb)
 
     @dp.callback_query(F.data.startswith("product:"))
     async def product_detail(cb: CallbackQuery):

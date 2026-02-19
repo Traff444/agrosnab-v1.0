@@ -71,8 +71,33 @@ class ProductService:
             self._categories_cache_time = now
         return self._categories_cache
 
+    def get_structured_categories(self) -> dict[str, list[str]]:
+        """Get categories structured by prefix (origin, weight)."""
+        products = self.get_available_products()
+        categories: dict[str, set[str]] = {"origin": set(), "weight": set()}
+
+        for p in products:
+            tags_str = p.get("tags", "")
+            if not tags_str:
+                continue
+            tags = [t.strip() for t in tags_str.replace(";", ",").split(",") if t.strip()]
+            for tag in tags:
+                if tag.startswith("origin:"):
+                    categories["origin"].add(tag.split(":", 1)[1])
+                elif tag.startswith("weight:"):
+                    categories["weight"].add(tag.split(":", 1)[1])
+
+        return {k: sorted(v) for k, v in categories.items() if v}
+
     def filter_by_category(self, category: str) -> list[dict[str, Any]]:
-        """Filter available products by category tag."""
+        """Filter available products by category tag.
+
+        Supports formats:
+        - "all" -- all products
+        - "origin:Россия" -- structured tag filter
+        - "weight:40-50г" -- structured tag filter
+        - "some tag" -- legacy tag search
+        """
         products = self.get_available_products()
         if category == "all":
             return products

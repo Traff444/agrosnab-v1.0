@@ -25,6 +25,19 @@ def escape_html(text: str) -> str:
 _PHONE_RE = re.compile(r"^\+?[0-9]{10,15}$")
 
 
+def validate_fio(fio: str) -> tuple[bool, str]:
+    """
+    Validate full name (ФИО).
+    Returns (is_valid, cleaned_fio_or_error).
+    """
+    cleaned = " ".join(fio.strip().split())
+    if len(cleaned) < 3:
+        return False, "ФИО слишком короткое (мин. 3 символа)"
+    if len(cleaned) > 100:
+        return False, "ФИО слишком длинное (макс. 100 символов)"
+    return True, cleaned
+
+
 def validate_phone(phone: str) -> tuple[bool, str]:
     """
     Validate phone number.

@@ -22,6 +22,8 @@ class Product:
 class OrderDraft:
     user_id: int
     phone: str
+    buyer_name: str
+    delivery_type: str  # pickup, cdek_pvz, pochta, courier
     delivery: str
     pickup_point: str
     items: list[tuple[str, int]]  # (sku, qty)

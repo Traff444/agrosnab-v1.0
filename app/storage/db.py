@@ -80,6 +80,19 @@ async def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_chat_user ON chat_history(user_id, created_at)"
         )
 
+        # Order counter for sequential numbering
+        await db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS order_counter (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_number INTEGER NOT NULL UNIQUE,
+                order_id TEXT NOT NULL UNIQUE,
+                user_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """
+        )
+
         # CRM events table
         await db.execute(
             """

@@ -22,10 +22,14 @@ class CartSummary:
 
     lines: list[str]
     total: int
+    total_qty: int
     items: list[tuple[str, int, str]]  # (sku, qty, name)
     is_empty: bool
     min_sum: int
     below_min: bool
+    discount_percent: int
+    discount_amount: int
+    total_after_discount: int
 
 
 class CartService:
@@ -33,6 +37,13 @@ class CartService:
 
     def __init__(self, product_service: ProductService):
         self._products = product_service
+
+    def _get_discount_settings(self) -> tuple[int, int]:
+        """Get discount threshold (qty) and percent from settings."""
+        settings = self._products.get_settings()
+        threshold = int(float(settings.get("Розница. скидка. порог", 100)))
+        percent = int(float(settings.get("Розница. скидка. процент", 10)))
+        return threshold, percent
 
     async def get_cart_summary(self, user_id: int) -> CartSummary:
         """Get cart summary with formatted lines and total."""
@@ -44,14 +55,19 @@ class CartService:
             return CartSummary(
                 lines=[],
                 total=0,
+                total_qty=0,
                 items=[],
                 is_empty=True,
                 min_sum=min_sum,
                 below_min=True,
+                discount_percent=0,
+                discount_amount=0,
+                total_after_discount=0,
             )
 
         lines = []
         total = 0
+        total_qty = 0
         items = []
 
         for sku, qty in cart_items:
@@ -60,17 +76,27 @@ class CartService:
                 continue
             line_sum = qty * p["price_rub"]
             total += line_sum
+            total_qty += qty
             name = escape_html(p["name"])
             lines.append(f"• <b>{name}</b>\n  {qty} × {p['price_rub']:,} ₽ = <b>{line_sum:,} ₽</b>")
             items.append((sku, qty, p["name"]))
 
+        threshold, percent = self._get_discount_settings()
+        discount_percent = percent if total_qty >= threshold else 0
+        discount_amount = total * discount_percent // 100
+        total_after_discount = total - discount_amount
+
         return CartSummary(
             lines=lines,
             total=total,
+            total_qty=total_qty,
             items=items,
             is_empty=len(items) == 0,
             min_sum=min_sum,
-            below_min=total < min_sum,
+            below_min=total_after_discount < min_sum,
+            discount_percent=discount_percent,
+            discount_amount=discount_amount,
+            total_after_discount=total_after_discount,
         )
 
     def format_cart_text(self, summary: CartSummary) -> str:
@@ -79,7 +105,18 @@ class CartService:
             return "🧰 <b>Корзина</b>\n\nПока пусто. Добавьте товары из каталога!"
 
         text = "🧰 <b>Корзина</b>\n\n" + "\n\n".join(summary.lines)
-        text += f"\n\n━━━━━━━━━━━━━━━━━━━━━━\n💰 <b>Итого: {summary.total:,} ₽</b>"
+        text += "\n\n━━━━━━━━━━━━━━━━━━━━━━"
+
+        if summary.discount_percent > 0:
+            text += f"\n💰 <s>{summary.total:,} ₽</s>"
+            text += f"\n🏷 Скидка {summary.discount_percent}%: −{summary.discount_amount:,} ₽"
+            text += f"\n💰 <b>Итого: {summary.total_after_discount:,} ₽</b>"
+        else:
+            text += f"\n💰 <b>Итого: {summary.total:,} ₽</b>"
+            threshold, percent = self._get_discount_settings()
+            remaining = threshold - summary.total_qty
+            if remaining > 0:
+                text += f"\n💡 Ещё {remaining} шт. до скидки {percent}%"
 
         if summary.below_min:
             text += f"\n⚠️ Минималка: {summary.min_sum:,} ₽"
@@ -142,18 +179,28 @@ class CartService:
         self,
         user_id: int,
     ) -> tuple[list[str], int, list[tuple[str, int]]]:
-        """Calculate cart for checkout. Returns (lines, total, items)."""
+        """Calculate cart for checkout. Returns (lines, total_after_discount, items)."""
         cart_items = await cart_store.get_cart(user_id)
         products_by_sku = self._products.get_products_by_sku()
 
         lines = []
         total = 0
+        total_qty = 0
         for sku, qty in cart_items:
             p = products_by_sku.get(sku)
             if not p:
                 continue
             line_sum = qty * p["price_rub"]
             total += line_sum
+            total_qty += qty
             lines.append(f"- {p['name']} ({sku}) × {qty} = {line_sum} ₽")
 
-        return lines, total, cart_items
+        threshold, percent = self._get_discount_settings()
+        discount_percent = percent if total_qty >= threshold else 0
+        discount_amount = total * discount_percent // 100
+
+        if discount_amount > 0:
+            lines.append(f"Скидка {discount_percent}%: −{discount_amount} ₽")
+
+        total_after_discount = total - discount_amount
+        return lines, total_after_discount, cart_items

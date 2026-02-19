@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
+from typing import Union
 
 import aiosqlite
 
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Type aliases for clarity
 CartItem = tuple[str, int]  # (sku, qty)
-OrderIdGenerator = Callable[[], str]
+OrderIdGenerator = Union[Callable[[], str], Callable[[], Coroutine]]
 
 
 async def add_to_cart(user_id: int, sku: str, qty: int) -> None:
@@ -109,6 +111,24 @@ def compute_cart_hash(cart_items: list[CartItem]) -> str:
     return hashlib.sha256(data.encode()).hexdigest()[:16]
 
 
+async def generate_sequential_order_id(user_id: int = 0) -> str:
+    """Generate sequential order ID like ORD-000001, ORD-000002..."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "SELECT COALESCE(MAX(order_number), 0) FROM order_counter"
+        )
+        row = await cur.fetchone()
+        next_num = (row[0] if row else 0) + 1
+        order_id = f"ORD-{next_num:06d}"
+
+        await db.execute(
+            "INSERT INTO order_counter(order_number, order_id, user_id) VALUES(?, ?, ?)",
+            (next_num, order_id, user_id),
+        )
+        await db.commit()
+        return order_id
+
+
 async def get_or_create_checkout_session(
     user_id: int,
     cart_items: list[CartItem],
@@ -136,7 +156,8 @@ async def get_or_create_checkout_session(
             return row[0], False
 
         # Create new session
-        order_id = order_id_generator()
+        result = order_id_generator()
+        order_id = await result if asyncio.iscoroutine(result) else result
         await db.execute(
             "INSERT INTO checkout_sessions(user_id, cart_hash, order_id, status) VALUES(?, ?, ?, 'pending')",
             (user_id, cart_hash, order_id),

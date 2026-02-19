@@ -14,6 +14,7 @@ from .cart import (
     cleanup_old_checkout_sessions,
     clear_cart,
     compute_cart_hash,
+    generate_sequential_order_id,
     get_cart,
     get_cart_count,
     get_cart_items_count,
@@ -67,6 +68,7 @@ __all__ = [
     "CartItem",
     "OrderIdGenerator",
     # Cart functions
+    "generate_sequential_order_id",
     "add_to_cart",
     "set_qty",
     "remove_from_cart",

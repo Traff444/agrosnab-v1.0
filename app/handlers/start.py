@@ -101,12 +101,82 @@ def register_start_handlers(
 
     @dp.callback_query(F.data == "info:terms")
     async def terms(cb: CallbackQuery):
-        from ..utils import escape_html
-
         settings = product_service.get_settings()
-        min_sum = settings.get("Мин. сумма заказа", 5000)
-        t1 = escape_html(settings.get("Условие 1", ""))
-        text = f"📌 <b>Условия</b>\n\nМинимальная сумма заказа: {min_sum} ₽\n{t1}"
+        min_sum = settings.get("Мин. сумма заказа", 1000)
+        discount_threshold = settings.get("Розница. скидка. порог", 100)
+        discount_percent = settings.get("Розница. скидка. процент", 10)
+        wholesale_min = settings.get("Опт. мин. сумма", 20000)
+
+        text = (
+            "📌 <b>Условия</b>\n\n"
+            "🛒 <b>Розница:</b>\n"
+            f"• Минимальный заказ: {min_sum} ₽\n"
+            f"• Скидка {discount_percent}% при покупке от {discount_threshold} шт.\n"
+            "• Оплата при получении\n\n"
+            "📦 <b>Опт:</b>\n"
+            f"• Заказ от {wholesale_min:,} ₽\n"
+            "• Менеджер выставит счёт\n"
+            "• Индивидуальные условия"
+        )
+        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=back_to_menu_kb())
+        await cb.answer()
+
+    @dp.callback_query(F.data == "info:delivery")
+    async def info_delivery(cb: CallbackQuery):
+        text = (
+            "🚚 <b>Доставка</b>\n\n"
+            "📦 <b>ПВЗ СДЭК</b>\n"
+            "Доставка в пункт выдачи СДЭК по всей России.\n\n"
+            "📮 <b>Почта России</b>\n"
+            "Доставка Почтой России (от 1 000 ₽).\n\n"
+            "🚗 <b>Курьер</b>\n"
+            "Курьерская доставка по Москве/МО, СПб/Ленобласти.\n\n"
+            "🏪 <b>Самовывоз</b>\n"
+            "Фуд Сити, м. Корниловская\n\n"
+            "💡 Стоимость доставки рассчитывает менеджер."
+        )
+        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=back_to_menu_kb())
+        await cb.answer()
+
+    @dp.callback_query(F.data == "info:payment")
+    async def info_payment(cb: CallbackQuery):
+        text = (
+            "💳 <b>Оплата</b>\n\n"
+            "🛒 <b>Розница:</b>\n"
+            "• Оплата при получении\n"
+            "• Наличные или перевод\n\n"
+            "📦 <b>Опт (от 20 000 ₽):</b>\n"
+            "• Менеджер выставит счёт\n"
+            "• Безналичный расчёт\n"
+            "• Работа по договору"
+        )
+        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=back_to_menu_kb())
+        await cb.answer()
+
+    @dp.callback_query(F.data == "info:pickup")
+    async def info_pickup(cb: CallbackQuery):
+        text = (
+            "🏪 <b>Самовывоз</b>\n\n"
+            "📍 <b>Адрес:</b>\n"
+            "Фуд Сити, м. Корниловская\n"
+            "Вход 2/3, этаж 2, линия 22, павильон 60\n"
+            "«Табачный мир»\n\n"
+            "🕐 <b>Режим работы:</b>\n"
+            "Пн-Вс: 10:00 — 17:00\n\n"
+            "💡 При самовывозе оплата на месте."
+        )
+        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=back_to_menu_kb())
+        await cb.answer()
+
+    @dp.callback_query(F.data == "info:manager")
+    async def info_manager(cb: CallbackQuery):
+        text = (
+            "👨‍💼 <b>Связаться с менеджером</b>\n\n"
+            "📱 <b>Telegram:</b> @agrosna1b_bot\n"
+            "📞 <b>Телефон:</b> +7 (916) 481-07-69\n"
+            "📧 <b>Email:</b> info@mahorkamarket.ru\n\n"
+            "🕐 Время работы: Пн-Вс 10:00 — 17:00"
+        )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=back_to_menu_kb())
         await cb.answer()
 

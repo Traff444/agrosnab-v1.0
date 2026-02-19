@@ -28,6 +28,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
 
   useEffect(() => {
     setLoading(true);
@@ -45,7 +46,23 @@ function App() {
 
   const handleRetry = () => setReloadKey((k) => k + 1);
 
-  const visibleProducts = showAllProducts ? products : products.slice(0, 6);
+  const filteredProducts = activeFilter === 'all'
+    ? products
+    : products.filter((p) => p.tags.some((t) => t.toLowerCase() === activeFilter.toLowerCase()));
+
+  const visibleProducts = showAllProducts ? filteredProducts : filteredProducts.slice(0, 6);
+
+  const filterTags = (() => {
+    const origins = new Set<string>();
+    const weights = new Set<string>();
+    for (const p of products) {
+      for (const tag of p.tags) {
+        if (tag.startsWith('origin:')) origins.add(tag);
+        else if (tag.startsWith('weight:')) weights.add(tag);
+      }
+    }
+    return { origins: [...origins].sort(), weights: [...weights].sort() };
+  })();
 
   return (
     <div className="min-h-screen bg-textured-dark">
@@ -131,20 +148,62 @@ function App() {
           {/* Products grid */}
           {!loading && !error && products.length > 0 && (
             <>
+              {/* Filter buttons */}
+              {(filterTags.origins.length > 0 || filterTags.weights.length > 0) && (
+                <div className="flex flex-wrap gap-2 mb-6 md:mb-8">
+                  <button
+                    onClick={() => { setActiveFilter('all'); setShowAllProducts(false); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 ${
+                      activeFilter === 'all'
+                        ? 'bg-white text-gray-900'
+                        : 'border border-white/40 text-white hover:bg-white/10'
+                    }`}
+                  >
+                    Все
+                  </button>
+                  {filterTags.origins.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => { setActiveFilter(tag); setShowAllProducts(false); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 ${
+                        activeFilter === tag
+                          ? 'bg-white text-gray-900'
+                          : 'border border-white/40 text-white hover:bg-white/10'
+                      }`}
+                    >
+                      🌍 {tag.split(':')[1]}
+                    </button>
+                  ))}
+                  {filterTags.weights.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => { setActiveFilter(tag); setShowAllProducts(false); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 ${
+                        activeFilter === tag
+                          ? 'bg-white text-gray-900'
+                          : 'border border-white/40 text-white hover:bg-white/10'
+                      }`}
+                    >
+                      ⚖️ {tag.split(':')[1]}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
                 {visibleProducts.map((product) => (
                   <ProductCard key={product.sku} product={product} />
                 ))}
               </div>
 
-              {products.length > 6 && (
+              {filteredProducts.length > 6 && (
                 <div className="text-center">
                   {!showAllProducts ? (
                     <button
                       onClick={() => setShowAllProducts(true)}
                       className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white/10 transition-colors px-6 py-2.5 md:px-8 md:py-3 rounded-lg font-medium text-sm md:text-base"
                     >
-                      Показать весь ассортимент ({products.length - 6} ещё)
+                      Показать весь ассортимент ({filteredProducts.length - 6} ещё)
                       <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
                   ) : (
@@ -224,11 +283,11 @@ function App() {
         </div>
       </section>
 
-      {/* Wholesale Terms */}
+      {/* Terms */}
       <section id="terms" className="terms-bg py-12 md:py-16 lg:py-24 px-4 md:px-6">
         <div className="max-w-[1200px] mx-auto">
           <h2 className="font-heading font-bold text-2xl md:text-3xl lg:text-4xl mb-8 md:mb-12 text-text-on-dark">
-            Условия оптовых поставок
+            Условия заказа
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -236,24 +295,24 @@ function App() {
               <div className="flex items-center gap-4 mb-4 min-h-[64px] md:min-h-[72px]">
                 <MessageSquare className="w-10 h-10 md:w-12 md:h-12 text-white flex-shrink-0" strokeWidth={1.5} />
                 <div className="flex-1">
-                  <h3 className="font-heading font-semibold text-lg md:text-xl text-text-on-dark leading-tight">Гибкая система скидок</h3>
+                  <h3 className="font-heading font-semibold text-lg md:text-xl text-text-on-dark leading-tight">Розница</h3>
                 </div>
               </div>
               <p className="text-subtext-on-dark leading-relaxed mb-4 text-sm md:text-base min-h-[48px]">
-                Индивидуальные условия для постоянных клиентов и крупных объёмов
+                Заказ от 1 000 ₽ с оплатой при получении
               </p>
               <ul className="space-y-2.5 text-subtext-on-dark text-sm md:text-base">
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <span><strong className="text-text-on-dark">Скидки от 500 кг</strong></span>
+                  <span><strong className="text-text-on-dark">Минимальный заказ 1 000 ₽</strong></span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <span>Специальные условия для региональных компаний</span>
+                  <span><strong className="text-text-on-dark">Скидка 10%</strong> при покупке от 100 шт.</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <span>Бонусы для постоянных клиентов</span>
+                  <span>Оплата при получении</span>
                 </li>
               </ul>
             </div>
@@ -262,24 +321,24 @@ function App() {
               <div className="flex items-center gap-4 mb-4 min-h-[64px] md:min-h-[72px]">
                 <FileCheck className="w-10 h-10 md:w-12 md:h-12 text-white flex-shrink-0" strokeWidth={1.5} />
                 <div className="flex-1">
-                  <h3 className="font-heading font-semibold text-lg md:text-xl text-text-on-dark leading-tight">Удобная оплата</h3>
+                  <h3 className="font-heading font-semibold text-lg md:text-xl text-text-on-dark leading-tight">Опт</h3>
                 </div>
               </div>
               <p className="text-subtext-on-dark leading-relaxed mb-4 text-sm md:text-base min-h-[48px]">
-                Несколько вариантов оплаты и работа по договору
+                Заказ от 20 000 ₽ с индивидуальными условиями
               </p>
               <ul className="space-y-2.5 text-subtext-on-dark text-sm md:text-base">
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <span><strong className="text-text-on-dark">Безналичный расчёт</strong></span>
+                  <span><strong className="text-text-on-dark">Заказ от 20 000 ₽</strong></span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <span>Отсрочка для проверенных партнёров</span>
+                  <span>Менеджер выставит счёт</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0 mt-0.5" strokeWidth={2} />
-                  <span>Полный пакет документов</span>
+                  <span>Безналичный расчёт, работа по договору</span>
                 </li>
               </ul>
             </div>
@@ -293,32 +352,20 @@ function App() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
             <div>
               <h2 className="font-heading font-bold text-2xl md:text-3xl lg:text-4xl mb-5 md:mb-6 text-text-on-light">
-                Доставка <span style={{ color: '#7A8B6C' }}>и география</span>
+                Доставка <span style={{ color: '#7A8B6C' }}>и самовывоз</span>
               </h2>
               <p className="text-sm md:text-base text-subtext-on-light leading-relaxed mb-4 md:mb-6">
-                Организуем доставку по всей территории России. Работаем с проверенными транспортными
-                компаниями, гарантируем сохранность груза.
+                4 способа получить заказ. Оплата при получении.
               </p>
               <div className="space-y-3 md:space-y-4">
-                <div className="flex items-start gap-3 md:gap-4 card-soft p-4 md:p-5 rounded-xl transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
-                  <div className="w-10 h-10 md:w-11 md:h-11 rounded-lg bg-color-accent/10 flex items-center justify-center flex-shrink-0">
-                    <Truck className="w-5 h-5 md:w-6 md:h-6 text-color-accent" strokeWidth={1.8} />
-                  </div>
-                  <div>
-                    <p className="font-semibold mb-1 text-text-on-light text-sm md:text-base">Доставка по России</p>
-                    <p className="text-xs md:text-sm text-subtext-on-light leading-relaxed">
-                      Транспортными компаниями в любой регион
-                    </p>
-                  </div>
-                </div>
                 <div className="flex items-start gap-3 md:gap-4 card-soft p-4 md:p-5 rounded-xl transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
                   <div className="w-10 h-10 md:w-11 md:h-11 rounded-lg bg-color-accent/10 flex items-center justify-center flex-shrink-0">
                     <MapPin className="w-5 h-5 md:w-6 md:h-6 text-color-accent" strokeWidth={1.8} />
                   </div>
                   <div>
-                    <p className="font-semibold mb-1 text-text-on-light text-sm md:text-base">Самовывоз</p>
+                    <p className="font-semibold mb-1 text-text-on-light text-sm md:text-base">Самовывоз — Фуд Сити</p>
                     <p className="text-xs md:text-sm text-subtext-on-light leading-relaxed">
-                      Со склада в Краснодарском крае
+                      м. Корниловская, вход 2/3, этаж 2, линия 22, павильон 60, «Табачный мир». Пн-Вс 10:00–17:00
                     </p>
                   </div>
                 </div>
@@ -327,9 +374,31 @@ function App() {
                     <Package className="w-5 h-5 md:w-6 md:h-6 text-color-accent" strokeWidth={1.8} />
                   </div>
                   <div>
-                    <p className="font-semibold mb-1 text-text-on-light text-sm md:text-base">Надёжная упаковка</p>
+                    <p className="font-semibold mb-1 text-text-on-light text-sm md:text-base">ПВЗ СДЭК</p>
                     <p className="text-xs md:text-sm text-subtext-on-light leading-relaxed">
-                      Защита от влаги и повреждений при транспортировке
+                      Доставка в любой пункт выдачи СДЭК по России
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 md:gap-4 card-soft p-4 md:p-5 rounded-xl transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+                  <div className="w-10 h-10 md:w-11 md:h-11 rounded-lg bg-color-accent/10 flex items-center justify-center flex-shrink-0">
+                    <Truck className="w-5 h-5 md:w-6 md:h-6 text-color-accent" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-1 text-text-on-light text-sm md:text-base">Почта России</p>
+                    <p className="text-xs md:text-sm text-subtext-on-light leading-relaxed">
+                      Доставка Почтой России (заказ от 1 000 ₽)
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 md:gap-4 card-soft p-4 md:p-5 rounded-xl transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+                  <div className="w-10 h-10 md:w-11 md:h-11 rounded-lg bg-color-accent/10 flex items-center justify-center flex-shrink-0">
+                    <Truck className="w-5 h-5 md:w-6 md:h-6 text-color-accent" strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-1 text-text-on-light text-sm md:text-base">Курьер</p>
+                    <p className="text-xs md:text-sm text-subtext-on-light leading-relaxed">
+                      Москва/МО, Санкт-Петербург/Ленобласть
                     </p>
                   </div>
                 </div>
@@ -338,27 +407,27 @@ function App() {
 
             <div className="card-soft rounded-xl p-6 md:p-8 border border-color-accent-2/30">
               <h3 className="font-heading font-semibold text-lg md:text-xl mb-5 md:mb-6 text-text-on-light">
-                Основные регионы поставок
+                Оплата при получении
               </h3>
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
-                {[
-                  'Москва и МО',
-                  'Санкт-Петербург',
-                  'Краснодар',
-                  'Ростов-на-Дону',
-                  'Екатеринбург',
-                  'Новосибирск',
-                  'Казань',
-                  'Нижний Новгород',
-                ].map((city) => (
-                  <div key={city} className="flex items-center gap-2.5 transition-all duration-300 hover:translate-x-1">
-                    <div className="w-1.5 h-1.5 bg-color-accent rounded-full shadow-sm"></div>
-                    <span className="text-xs md:text-sm text-text-on-light">{city}</span>
-                  </div>
-                ))}
+              <p className="text-sm md:text-base text-subtext-on-light leading-relaxed mb-5">
+                Первые 3 месяца работаем по оплате при получении — вы платите только когда товар у вас в руках.
+              </p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-color-accent flex-shrink-0" strokeWidth={2} />
+                  <span className="text-sm text-text-on-light">Наличные при получении</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-color-accent flex-shrink-0" strokeWidth={2} />
+                  <span className="text-sm text-text-on-light">Перевод при получении</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-color-accent flex-shrink-0" strokeWidth={2} />
+                  <span className="text-sm text-text-on-light">Опт от 20 000 ₽ — по счёту</span>
+                </div>
               </div>
               <p className="text-xs md:text-sm text-subtext-on-light mt-5 md:mt-6 leading-relaxed">
-                И другие города России — уточните у менеджера
+                Стоимость доставки рассчитывает менеджер
               </p>
             </div>
           </div>
