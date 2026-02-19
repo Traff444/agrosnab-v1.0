@@ -339,7 +339,9 @@ def stock_list_keyboard(
 
     for p in products:
         status = "✅" if p.active else "❌"
-        label = f"{status} {p.name[:25]} ({p.stock} шт.)"
+        weight = f" {p.package_weight}г" if p.package_weight else ""
+        name_max = 25 - len(weight)
+        label = f"{status} {p.name[:name_max]}{weight} ({p.stock} шт.)"
         buttons.append(
             [InlineKeyboardButton(text=label, callback_data=f"stock_select_{p.row_number}")]
         )
