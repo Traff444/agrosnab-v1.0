@@ -410,7 +410,7 @@ function App() {
                 Оплата при получении
               </h3>
               <p className="text-sm md:text-base text-subtext-on-light leading-relaxed mb-5">
-                Первые 3 месяца работаем по оплате при получении — вы платите только когда товар у вас в руках.
+                Работаем по оплате при получении — вы платите только когда товар у вас в руках.
               </p>
               <div className="space-y-3">
                 <div className="flex items-center gap-2.5">
