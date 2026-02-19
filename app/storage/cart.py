@@ -7,7 +7,6 @@ import hashlib
 import json
 import logging
 from collections.abc import Callable, Coroutine
-from typing import Union
 
 import aiosqlite
 
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Type aliases for clarity
 CartItem = tuple[str, int]  # (sku, qty)
-OrderIdGenerator = Union[Callable[[], str], Callable[[], Coroutine]]
+OrderIdGenerator = Callable[[], str] | Callable[[], Coroutine]
 
 
 async def add_to_cart(user_id: int, sku: str, qty: int) -> None:
