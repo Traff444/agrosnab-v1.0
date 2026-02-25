@@ -130,7 +130,9 @@ function isValidImageUrl(url: string): boolean {
 | Компонент | Файл | Покрытие |
 |-----------|------|----------|
 | Owner Bot Security | `owner_bot/tests/test_security.py` | Высокое |
-| Shop Bot Handlers | `tests/test_*.py` | Среднее (25 тестов исправлено в v1.5) |
+| Owner Bot Critical Handlers | `owner_bot/tests/test_critical_handlers.py` | Высокое (21 тест) |
+| Shop Bot Handlers | `tests/test_handlers.py` | Высокое (65 тестов: format, pageinfo) |
+| Shop Bot Storage | `tests/test_*.py` | Среднее |
 | CDEK Integration | `tests/test_cdek.py`, `tests/test_cdek_demo.py` | Среднее |
 | Photo Quality | `owner_bot/tests/test_photo_quality.py` | Высокое |
 | SKU Generator | `owner_bot/tests/test_sku_generator.py` | Высокое |
@@ -193,7 +195,7 @@ def setup_sentry():
 
 | Приоритет | Рекомендация | Обоснование | Статус |
 |-----------|--------------|-------------|--------|
-| КРИТИЧЕСКИЙ | Добавить unit тесты для Shop Bot | Нет тестов для `app/handlers/`, `app/ai_manager.py` | ✅ Частично (25 тестов добавлено в v1.5) |
+| КРИТИЧЕСКИЙ | Добавить unit тесты для Shop Bot | Нет тестов для `app/handlers/`, `app/ai_manager.py` | ✅ 86 тестов (v1.5 + v1.6: handlers, critical) |
 | ВЫСОКИЙ | Webhook вместо polling | `dp.start_polling()` не подходит для production с высокой нагрузкой | ⏳ В планах |
 | ВЫСОКИЙ | Rate limiting для AI Manager | OpenAI имеет лимиты, нужен throttling | ⏳ В планах |
 | СРЕДНИЙ | PostgreSQL вместо SQLite | `confirm_actions.db` не масштабируется для multi-instance | ⏳ В планах |
@@ -420,8 +422,8 @@ export function getTelegramDeepLink(sku: string): string {
 | Аспект | Оценка | Комментарий |
 |--------|--------|-------------|
 | Архитектура | 8/10 | Чистая, модульная, хорошее разделение ответственности |
-| Качество кода | 7/10 | Типизация, обработка ошибок, но мало тестов для Shop Bot |
-| Безопасность | 8/10 | Whitelist middleware, валидация, нет hardcoded secrets |
+| Качество кода | 8/10 | Типизация, обработка ошибок, 86 новых тестов для хендлеров |
+| Безопасность | 9/10 | Whitelist middleware, валидация, секреты очищены из документации |
 | Бизнес-логика | 9/10 | Полная автоматизация, CRM этапы, AI менеджер |
 | UX/UI | 8/10 | Современный дизайн, мобильная адаптация |
 | SEO | 5/10 | Базовые meta теги, нет JSON-LD и sitemap |
@@ -441,10 +443,10 @@ export function getTelegramDeepLink(sku: string): string {
    - Добавить gtag.js в `sitemahorkaproject/index.html`
    - Настроить события: page_view, click_cta, open_telegram
 
-2. **Добавить unit тесты для Shop Bot**
-   - `tests/test_ai_manager.py` — тесты tool calls
-   - `tests/test_handlers.py` — тесты обработчиков
-   - Цель: 60% code coverage
+2. ~~**Добавить unit тесты для Shop Bot**~~ ✅ Выполнено (2026-02-25)
+   - `tests/test_handlers.py` — 65 тестов (format_product, format_product_card, pageinfo)
+   - `owner_bot/tests/test_critical_handlers.py` — 21 тест (/start, /cancel, /help)
+   - См. `docs/plans/2026-02-25-pre-delivery-audit.md` для полного аудита
 
 ### Важные (следующий месяц)
 
@@ -505,4 +507,5 @@ export function getTelegramDeepLink(sku: string): string {
 ---
 
 *Документ создан: 2026-01-28*
-*Версия: 1.0*
+*Обновлён: 2026-02-25 (секреты очищены, тесты добавлены, аудит проведён)*
+*Версия: 1.1*
