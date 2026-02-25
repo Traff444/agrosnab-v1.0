@@ -4,13 +4,17 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from app.drive import drive_client
+from app.cloudinary_client import cloudinary_client
+from app.config import get_settings
 from app.keyboards import main_menu_keyboard
 from app.photo_enhance import cleanup_tmp_files
 from app.security import confirm_store
 from app.sheets import sheets_client
 
 router = Router()
+
+SHEETS_URL = "https://docs.google.com/spreadsheets/d/{sheet_id}"
+CLOUDINARY_URL = "https://console.cloudinary.com/console/c-{cloud_name}/media_library/folders/{folder}"
 
 
 @router.message(F.text == "🔧 Статус")
@@ -19,45 +23,58 @@ async def show_status(message: Message, state: FSMContext) -> None:
     await state.clear()  # Clear FSM state to avoid conflicts with intake flow
     await message.answer("🔍 Проверяю подключения...")
 
-    # Run checks in parallel-ish manner
-    sheets_status = await sheets_client.test_connection()
-    drive_status = await drive_client.test_connection()
+    settings = get_settings()
 
-    lines = ["🔧 Статус системы\n"]
+    sheets_status = await sheets_client.test_connection()
+    cloud_status = await cloudinary_client.test_connection()
+
+    lines = ["🔧 *Статус системы*\n"]
 
     # Google Sheets status
     if sheets_status.get("ok"):
-        lines.append("✅ Google Sheets")
-        lines.append(f"   Таблица: {sheets_status.get('spreadsheet_title', 'N/A')}")
-        lines.append(f"   Листы: {', '.join(sheets_status.get('sheets', []))}")
+        title = sheets_status.get("spreadsheet_title", "N/A")
+        lines.append(f"✅ *Google Sheets*")
+        lines.append(f"   Таблица: {title}")
+        sheets = sheets_status.get("sheets", [])
+        if sheets:
+            lines.append(f"   Листы: {', '.join(sheets)}")
         cols = sheets_status.get("columns_found", [])
         if cols:
             lines.append(f"   Колонки: {len(cols)} найдено")
+        sheet_link = SHEETS_URL.format(sheet_id=settings.google_sheets_id)
+        lines.append(f"   📎 [Открыть таблицу]({sheet_link})")
     else:
-        lines.append("❌ Google Sheets")
+        lines.append("❌ *Google Sheets*")
         error = sheets_status.get("error", "Неизвестная ошибка")
         lines.append(f"   Ошибка: {error}")
-
         missing = sheets_status.get("missing_columns", [])
         if missing:
             lines.append(f"   Отсутствуют колонки: {', '.join(missing)}")
 
     lines.append("")
 
-    # Google Drive status
-    if drive_status.get("ok"):
-        lines.append("✅ Google Drive")
-        lines.append(f"   Папка: {drive_status.get('folder_name', 'N/A')}")
+    # Cloudinary status
+    if cloud_status.get("ok"):
+        cloud_name = cloud_status.get("cloud_name", "N/A")
+        folder = cloud_status.get("folder", "mahorka_products")
+        lines.append("✅ *Cloudinary*")
+        lines.append(f"   Облако: {cloud_name}")
+        lines.append(f"   Папка: {folder}")
+        cloud_link = CLOUDINARY_URL.format(cloud_name=cloud_name, folder=folder)
+        lines.append(f"   📎 [Открыть медиатеку]({cloud_link})")
     else:
-        lines.append("❌ Google Drive")
-        lines.append(f"   Ошибка: {drive_status.get('error', 'Неизвестная ошибка')}")
+        lines.append("❌ *Cloudinary*")
+        lines.append(f"   Ошибка: {cloud_status.get('error', 'Неизвестная ошибка')}")
 
     lines.append("")
+    lines.append("🧹 Для очистки временных файлов: /cleanup")
 
-    # Cleanup option
-    lines.append("🧹 Для очистки временных файлов используйте /cleanup")
-
-    await message.answer("\n".join(lines), reply_markup=main_menu_keyboard(), parse_mode=None)
+    await message.answer(
+        "\n".join(lines),
+        reply_markup=main_menu_keyboard(),
+        parse_mode="Markdown",
+        disable_web_page_preview=True,
+    )
 
 
 @router.message(F.text == "/cleanup")
@@ -98,14 +115,14 @@ async def confirm_cleanup(callback: CallbackQuery) -> None:
 async def health_check(message: Message) -> None:
     """Simple health check for monitoring."""
     sheets_ok = (await sheets_client.test_connection()).get("ok", False)
-    drive_ok = (await drive_client.test_connection()).get("ok", False)
+    cloud_ok = (await cloudinary_client.test_connection()).get("ok", False)
 
-    if sheets_ok and drive_ok:
+    if sheets_ok and cloud_ok:
         await message.answer("✅ OK")
     else:
         issues = []
         if not sheets_ok:
             issues.append("sheets")
-        if not drive_ok:
-            issues.append("drive")
+        if not cloud_ok:
+            issues.append("cloudinary")
         await message.answer(f"⚠️ DEGRADED: {', '.join(issues)}")

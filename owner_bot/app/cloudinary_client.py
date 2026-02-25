@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 
 import cloudinary
+import cloudinary.api
 import cloudinary.uploader
 
 from app.config import get_settings
@@ -78,6 +79,28 @@ class CloudinaryClient:
                 permissions_ok=False,
                 error_message=str(e),
             )
+
+    async def test_connection(self) -> dict:
+        """Test Cloudinary connection and return diagnostic info."""
+        if not self._configured:
+            return {
+                "ok": False,
+                "error": "Cloudinary не настроен",
+            }
+
+        try:
+            settings = get_settings()
+            result = cloudinary.api.ping()
+            return {
+                "ok": result.get("status") == "ok",
+                "cloud_name": settings.cloudinary_cloud_name,
+                "folder": "mahorka_products",
+            }
+        except Exception as e:
+            return {
+                "ok": False,
+                "error": str(e),
+            }
 
     async def delete_photo(self, public_id: str) -> bool:
         """Delete photo from Cloudinary.
