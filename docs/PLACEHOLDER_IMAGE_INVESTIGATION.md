@@ -161,7 +161,7 @@ await state.set_state(IntakeState.awaiting_photo)
 
 ### Проверить в Google Sheets:
 
-1. Откройте таблицу (ID: `1r9rpm7WF1tAjPud8DhpgszpPQNVhfforh1XXyKNuR9A`)
+1. Откройте таблицу (ID из `.env` → `GOOGLE_SHEETS_ID`)
 2. Лист "Склад"
 3. Найдите строку с товаром "Тест создания товара" (SKU: `PRD-20260127-ADE0`)
 4. **Ожидаемый результат:** Колонка `Фото_URL` пустая

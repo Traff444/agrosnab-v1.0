@@ -184,11 +184,11 @@ GOOGLE_SERVICE_ACCOUNT_JSON_PATH=/app/secrets/your-service-account.json
 # Telegram Bot
 # Получить токен: @BotFather → /newbot
 # Бот: @tophitboss_bot (https://t.me/tophitboss_bot)
-TELEGRAM_BOT_TOKEN=8015984812:AAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-OWNER_TELEGRAM_IDS=481890  # Через запятую для нескольких
+TELEGRAM_BOT_TOKEN=YOUR_BOT_TOKEN_FROM_BOTFATHER
+OWNER_TELEGRAM_IDS=YOUR_TELEGRAM_ID  # Через запятую для нескольких
 
 # Google Sheets
-GOOGLE_SHEETS_ID=1r9rpm7WF1tAjPud8DhpgszpPQNVhfforh1XXyKNuR9A
+GOOGLE_SHEETS_ID=YOUR_GOOGLE_SHEETS_ID
 
 # Google Service Account (один из вариантов)
 # Вариант 1: Путь к JSON файлу (локальная разработка)
@@ -197,7 +197,7 @@ GOOGLE_SERVICE_ACCOUNT_JSON_PATH=/path/to/service-account.json
 GOOGLE_SERVICE_ACCOUNT_JSON_B64=
 
 # Google Drive
-DRIVE_FOLDER_ID=1BlVN_L21bhax8aFFVnThDohHLXRpR87Z
+DRIVE_FOLDER_ID=YOUR_GOOGLE_DRIVE_FOLDER_ID
 
 # Настройки качества фото (опционально)
 PHOTO_MIN_SIZE=800

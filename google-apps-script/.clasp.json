@@ -1,7 +1,7 @@
 {
-  "scriptId": "1467QqDGs35UTQFDojkz5Ps2G1uRD3ksnDX9rQt4shaJbTbeWqf7bQioQ",
+  "scriptId": "YOUR_APPS_SCRIPT_ID",
   "rootDir": "",
-  "parentId": "1r9rpm7WF1tAjPud8DhpgszpPQNVhfforh1XXyKNuR9A",
+  "parentId": "YOUR_GOOGLE_SHEETS_ID",
   "scriptExtensions": [
     ".js",
     ".gs"

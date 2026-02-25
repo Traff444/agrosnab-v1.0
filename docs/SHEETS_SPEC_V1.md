@@ -144,7 +144,7 @@ REQUIRED_COLUMNS = ["SKU", "Наименование", "Цена_руб", "Ос�
 ```
 Row 1: date | operation_id | sku | name | qty | stock_before | stock_after | reason | source | actor_id | actor_username | note
 Row 2: Дата | ID операции | Артикул | Название | Количество | Было на складе | Стало на складе | Причина | Источник | ID актора | Имя актора | Примечание
-Row 3: 2026-01-30T14:25:00 | abc123def456 | PRD-001 | Махорка СССР | 10 | 50 | 60 | intake | owner_intake | 481890 | admin | Приход от поставщика
+Row 3: 2026-01-30T14:25:00 | abc123def456 | PRD-001 | Махорка СССР | 10 | 50 | 60 | intake | owner_intake | 123456789 | admin | Приход от поставщика
 ```
 
 ---

@@ -228,13 +228,13 @@ AI: Показывает сумму корзины
 
 ```bash
 # Telegram
-TELEGRAM_BOT_TOKEN=8015984812:AAH...
-OWNER_TELEGRAM_IDS=481890  # Через запятую для нескольких
+TELEGRAM_BOT_TOKEN=YOUR_OWNER_BOT_TOKEN
+OWNER_TELEGRAM_IDS=YOUR_TELEGRAM_ID  # Через запятую для нескольких
 
 # Google
-GOOGLE_SHEETS_ID=1r9rpm7WF1tAjPud8Dhpgsz...
+GOOGLE_SHEETS_ID=YOUR_GOOGLE_SHEETS_ID
 GOOGLE_SERVICE_ACCOUNT_JSON_PATH=/path/to/service-account.json
-DRIVE_FOLDER_ID=1BlVN_L21bhax8aFFVnThDoh...
+DRIVE_FOLDER_ID=YOUR_GOOGLE_DRIVE_FOLDER_ID
 
 # Настройки фото
 PHOTO_MIN_SIZE=800
@@ -251,10 +251,10 @@ TIMEZONE=Europe/Vilnius
 
 ```bash
 # Telegram
-TELEGRAM_BOT_TOKEN=8384232147:AAF...
+TELEGRAM_BOT_TOKEN=YOUR_SHOP_BOT_TOKEN
 
 # Google
-GOOGLE_SHEETS_ID=1r9rpm7WF1tAjPud8Dhpgsz...
+GOOGLE_SHEETS_ID=YOUR_GOOGLE_SHEETS_ID
 GOOGLE_SERVICE_ACCOUNT_JSON_PATH=/path/to/service-account.json
 
 # OpenAI (для AI-менеджера)
@@ -402,5 +402,5 @@ docker compose up --build
 |--------|-----|
 | Owner Bot | https://t.me/tophitboss_bot |
 | Shop Bot | https://t.me/agrosna1b_bot |
-| Google Sheets | https://docs.google.com/spreadsheets/d/1r9rpm7WF1tAjPud8DhpgszpPQNVhfforh1XXyKNuR9A |
-| Google Drive (фото) | https://drive.google.com/drive/folders/1BlVN_L21bhax8aFFVnThDohHLXRpR87Z |
+| Google Sheets | `GOOGLE_SHEETS_ID` из `.env` |
+| Google Drive (фото) | `DRIVE_FOLDER_ID` из `.env` |

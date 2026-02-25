@@ -321,4 +321,4 @@ https://script.google.com/macros/s/AKfycbzJ31qZN_j6opR-uEteEdZbo1w6GjXUyQWdr9Lmj
 - [Полная документация системы](./SYSTEM_OVERVIEW.md)
 - [Документация Owner Bot](./owner_bot/README.md)
 - [Руководство для клиента](./docs/CLIENT_GUIDE.md)
-- [Google Sheets](https://docs.google.com/spreadsheets/d/1r9rpm7WF1tAjPud8DhpgszpPQNVhfforh1XXyKNuR9A)
+- Google Sheets: используйте `GOOGLE_SHEETS_ID` из `.env`
