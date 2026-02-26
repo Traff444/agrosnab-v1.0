@@ -6,7 +6,7 @@
 
 | Бот | Назначение | Ссылка |
 |-----|------------|--------|
-| **Shop Bot** | Магазин для покупателей | [@agrosna1b_bot](https://t.me/agrosna1b_bot) |
+| **Shop Bot** | Магазин для покупателей | [@mahoorka_bot](https://t.me/mahoorka_bot) |
 | **Owner Bot** | Управление складом | [@tophitboss_bot](https://t.me/tophitboss_bot) |
 
 **Полная документация:** [SYSTEM_OVERVIEW.md](./SYSTEM_OVERVIEW.md)

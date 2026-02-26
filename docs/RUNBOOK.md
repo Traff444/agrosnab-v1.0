@@ -336,4 +336,4 @@ npm audit fix
 ## Контакты
 
 При критических проблемах:
-- Telegram-бот: @agrosna1b_bot
+- Telegram-бот: @mahoorka_bot

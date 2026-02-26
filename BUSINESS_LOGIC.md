@@ -4,7 +4,7 @@
 
 Этот документ описывает полную бизнес-логику системы, состоящей из трёх компонентов:
 1. **Owner Bot** (@tophitboss_bot) - бот владельца магазина
-2. **Shop Bot** (@agrosna1b_bot) - бот магазина для покупателей
+2. **Shop Bot** (@mahoorka_bot) - бот магазина для покупателей
 3. **Сайт** (sitemahorkaproject) - веб-витрина магазина
 
 ---
@@ -229,7 +229,7 @@
 
 ---
 
-## 3. Shop Bot (@agrosna1b_bot)
+## 3. Shop Bot (@mahoorka_bot)
 
 **Путь:** `/app/`
 **Назначение:** Каталог товаров, корзина, оформление заказов для покупателей
@@ -422,7 +422,7 @@ interface Product {
 
 Карточки товаров содержат ссылки на Telegram-бот:
 ```
-https://t.me/agrosna1b_bot?start=sku_{SKU}
+https://t.me/mahoorka_bot?start=sku_{SKU}
 ```
 
 ### 4.5 Секции сайта
@@ -555,7 +555,7 @@ https://drive.google.com/uc?export=view&id={FILE_ID}
 
 | Переменная | Описание |
 |------------|----------|
-| TELEGRAM_BOT_TOKEN | Токен бота @agrosna1b_bot |
+| TELEGRAM_BOT_TOKEN | Токен бота @mahoorka_bot |
 | OPENAI_API_KEY | (опционально) Ключ OpenAI |
 | CDEK_CLIENT_ID | (опционально) ID клиента CDEK |
 | CDEK_CLIENT_SECRET | (опционально) Секрет CDEK |

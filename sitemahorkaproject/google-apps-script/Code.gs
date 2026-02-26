@@ -623,7 +623,7 @@ function sendAlert(message) {
 
   const payload = {
     chat_id: CONFIG.TELEGRAM_CHAT_ID,
-    text: '🔔 АгроСнаб Alert\n\n' + message,
+    text: '🔔 ТопХит Alert\n\n' + message,
     parse_mode: 'HTML'
   };
 

@@ -15,7 +15,7 @@
           ▼                ▼                ▼
 ┌─────────────────┐              ┌─────────────────┐
 │   OWNER BOT     │              │    SHOP BOT     │
-│  @tophitboss_bot│              │  @agrosna1b_bot │
+│  @tophitboss_bot│              │  @mahoorka_bot │
 │                 │              │                 │
 │  • Приход       │              │  • Каталог      │
 │  • Управление   │◄────────────►│  • Корзина      │
@@ -106,8 +106,8 @@
 
 ## 2. Shop Bot — Магазин для покупателей
 
-**Бот:** [@agrosna1b_bot](https://t.me/agrosna1b_bot)
-**Имя:** Магазин Махорки
+**Бот:** [@mahoorka_bot](https://t.me/mahoorka_bot)
+**Имя:** ТопХит | Махорка
 **Назначение:** Каталог, корзина, оформление заказов
 
 ### Команды
@@ -401,6 +401,6 @@ docker compose up --build
 | Ресурс | URL |
 |--------|-----|
 | Owner Bot | https://t.me/tophitboss_bot |
-| Shop Bot | https://t.me/agrosna1b_bot |
+| Shop Bot | https://t.me/mahoorka_bot |
 | Google Sheets | `GOOGLE_SHEETS_ID` из `.env` |
 | Google Drive (фото) | `DRIVE_FOLDER_ID` из `.env` |
