@@ -172,7 +172,7 @@ def register_start_handlers(
     async def info_manager(cb: CallbackQuery):
         text = (
             "👨‍💼 <b>Связаться с менеджером</b>\n\n"
-            "📱 <b>Telegram:</b> @agrosna1b_bot\n"
+            "📱 <b>Telegram:</b> @mahoorka_bot\n"
             "📞 <b>Телефон:</b> +7 (916) 481-07-69\n"
             "📧 <b>Email:</b> info@mahorkamarket.ru\n\n"
             "🕐 Время работы: Пн-Вс 10:00 — 17:00"

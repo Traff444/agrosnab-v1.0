@@ -59,7 +59,7 @@ export function getCtaText(product: Product): string {
  * Генерирует deep link для Telegram бота с SKU товара
  */
 export function getTelegramDeepLink(sku: string): string {
-  return `https://t.me/agrosna1b_bot?start=${encodeURIComponent(`sku_${sku}`)}`;
+  return `https://t.me/mahoorka_bot?start=${encodeURIComponent(`sku_${sku}`)}`;
 }
 
 /**

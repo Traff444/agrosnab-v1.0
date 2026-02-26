@@ -501,7 +501,7 @@ function App() {
               Получите прайс и условия за 1 минуту
             </p>
             <a
-              href="https://t.me/agrosna1b_bot"
+              href="https://t.me/mahoorka_bot"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-color-accent text-white px-8 py-3.5 md:px-10 md:py-4 font-heading font-semibold text-base md:text-lg transition-all duration-300 hover:-translate-y-1 w-full sm:w-auto max-w-sm sm:max-w-none shadow-lg"

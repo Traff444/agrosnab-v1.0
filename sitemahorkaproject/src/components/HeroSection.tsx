@@ -112,7 +112,7 @@ export function HeroSection() {
           {/* CTA под pills */}
           <div className="mt-4">
             <a
-              href="https://t.me/agrosna1b_bot"
+              href="https://t.me/mahoorka_bot"
               target="_blank"
               rel="noopener noreferrer"
               className="group inline-flex w-full items-center justify-center gap-3 rounded-2xl
@@ -160,7 +160,7 @@ export function HeroSection() {
                 lg:text-[18px] lg:leading-7 lg:max-w-[46ch]
               "
             >
-              АгроСнаб дистрибьютор натурального растительного сырья из Аргентины, Инди, Крыма и РФ
+              ТопХит дистрибьютор натурального растительного сырья из Аргентины, Индии, Крыма и РФ
             </p>
 
             {/* Desktop: 3 преимущества остаются рядом с текстом (в верхней зоне) */}
@@ -220,7 +220,7 @@ export function HeroSection() {
             </ul>
 
             <a
-              href="https://t.me/agrosna1b_bot"
+              href="https://t.me/mahoorka_bot"
               target="_blank"
               rel="noopener noreferrer"
               className="group inline-flex w-full items-center justify-center gap-3 rounded-2xl

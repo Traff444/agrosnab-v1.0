@@ -2,7 +2,7 @@ import { Sprout } from 'lucide-react';
 
 export function Footer() {
   const openTelegram = () => {
-    window.open('https://t.me/agrosna1b_bot', '_blank', 'noopener,noreferrer');
+    window.open('https://t.me/mahoorka_bot', '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -59,7 +59,7 @@ export function Footer() {
             <h3 className="font-heading font-semibold text-base mb-4 text-text-on-dark">Контакты</h3>
             <div className="flex flex-col gap-2.5">
               <a
-                href="https://t.me/agrosna1b_bot"
+                href="https://t.me/mahoorka_bot"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-subtext-on-dark hover:text-color-accent hover:translate-x-1 transition-all duration-300 inline-block"

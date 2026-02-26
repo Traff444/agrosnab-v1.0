@@ -18,7 +18,7 @@ export function Header() {
   }, []);
 
   const openTelegram = () => {
-    window.open('https://t.me/agrosna1b_bot', '_blank', 'noopener,noreferrer');
+    window.open('https://t.me/mahoorka_bot', '_blank', 'noopener,noreferrer');
   };
 
   return (
