@@ -22,11 +22,13 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollTo = (href: string) => {
+  const scrollToSection = (href: string) => {
     setMenuOpen(false);
     const el = document.querySelector(href);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      const headerOffset = 90;
+      const top = el.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+      window.scrollTo({ top, behavior: 'smooth' });
     }
   };
 
@@ -44,7 +46,7 @@ export function Header() {
           {NAV_ITEMS.map((item) => (
             <button
               key={item.href}
-              onClick={() => scrollTo(item.href)}
+              onClick={() => scrollToSection(item.href)}
               className="nav-link text-sm font-medium transition-colors duration-200"
             >
               {item.label}
@@ -65,7 +67,7 @@ export function Header() {
           {NAV_ITEMS.map((item) => (
             <button
               key={item.href}
-              onClick={() => scrollTo(item.href)}
+              onClick={() => scrollToSection(item.href)}
               className="nav-link text-sm font-medium transition-colors duration-200 text-left"
             >
               {item.label}

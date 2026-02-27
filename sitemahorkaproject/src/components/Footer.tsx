@@ -1,10 +1,12 @@
 import { Sprout } from 'lucide-react';
 
 export function Footer() {
-  const scrollTo = (href: string) => {
+  const scrollToSection = (href: string) => {
     const el = document.querySelector(href);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      const headerOffset = 90;
+      const top = el.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+      window.scrollTo({ top, behavior: 'smooth' });
     }
   };
 
@@ -34,7 +36,7 @@ export function Footer() {
               ].map((item) => (
                 <button
                   key={item.href}
-                  onClick={() => scrollTo(item.href)}
+                  onClick={() => scrollToSection(item.href)}
                   className="text-sm text-subtext-on-dark hover:text-text-on-dark hover:translate-x-1 transition-all duration-300 text-left"
                 >
                   {item.label}
@@ -93,12 +95,12 @@ export function Footer() {
           <p className="text-xs md:text-sm text-subtext-on-dark text-center opacity-60">
             Сайт разработан командой{' '}
             <a
-              href="https://fanteam.pro"
+              href="https://famteam.pro"
               target="_blank"
               rel="noopener noreferrer"
               className="text-text-on-dark hover:text-color-accent transition-colors"
             >
-              FanTeam.pro
+              FamTeam.pro
             </a>
           </p>
         </div>
