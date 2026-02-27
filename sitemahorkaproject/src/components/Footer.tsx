@@ -85,7 +85,7 @@ export function Footer() {
 
         <div className="border-t border-white/5 pt-8 space-y-3 md:space-y-4">
           <p className="text-xs md:text-sm text-subtext-on-dark leading-relaxed text-center max-w-3xl mx-auto">
-            Информация на сайте предназначена для оптовых клиентов.
+            Информация на сайте предназначена для розничных покупателей и оптовых клиентов.
             Продукция реализуется как сельскохозяйственное сырьё
             для хозяйственных и технических целей.
           </p>
