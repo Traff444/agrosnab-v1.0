@@ -1,8 +1,11 @@
 import { Sprout } from 'lucide-react';
 
 export function Footer() {
-  const openTelegram = () => {
-    window.open('https://t.me/mahoorka_bot', '_blank', 'noopener,noreferrer');
+  const scrollTo = (href: string) => {
+    const el = document.querySelector(href);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   return (
@@ -12,7 +15,7 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Sprout className="w-7 h-7 text-color-accent" strokeWidth={1.8} />
-              <span className="font-heading font-bold text-xl text-text-on-dark">АгроСнаб</span>
+              <span className="font-heading font-bold text-xl text-text-on-dark">ТопХит</span>
             </div>
             <p className="text-sm text-subtext-on-dark leading-relaxed">
               Оптовые поставки сельскохозяйственного растительного сырья
@@ -22,36 +25,21 @@ export function Footer() {
           <div>
             <h3 className="font-heading font-semibold text-base mb-4 text-text-on-dark">Навигация</h3>
             <nav className="flex flex-col gap-2.5">
-              <button
-                onClick={openTelegram}
-                className="text-sm text-subtext-on-dark hover:text-text-on-dark hover:translate-x-1 transition-all duration-300 text-left"
-              >
-                Ассортимент
-              </button>
-              <button
-                onClick={openTelegram}
-                className="text-sm text-subtext-on-dark hover:text-text-on-dark hover:translate-x-1 transition-all duration-300 text-left"
-              >
-                Как заказать
-              </button>
-              <button
-                onClick={openTelegram}
-                className="text-sm text-subtext-on-dark hover:text-text-on-dark hover:translate-x-1 transition-all duration-300 text-left"
-              >
-                Условия
-              </button>
-              <button
-                onClick={openTelegram}
-                className="text-sm text-subtext-on-dark hover:text-text-on-dark hover:translate-x-1 transition-all duration-300 text-left"
-              >
-                Доставка
-              </button>
-              <button
-                onClick={openTelegram}
-                className="text-sm text-subtext-on-dark hover:text-text-on-dark hover:translate-x-1 transition-all duration-300 text-left"
-              >
-                Контакты
-              </button>
+              {[
+                { label: 'Ассортимент', href: '#catalog' },
+                { label: 'Как заказать', href: '#how-to-order' },
+                { label: 'Условия', href: '#terms' },
+                { label: 'Доставка', href: '#delivery' },
+                { label: 'Контакты', href: '#contacts' },
+              ].map((item) => (
+                <button
+                  key={item.href}
+                  onClick={() => scrollTo(item.href)}
+                  className="text-sm text-subtext-on-dark hover:text-text-on-dark hover:translate-x-1 transition-all duration-300 text-left"
+                >
+                  {item.label}
+                </button>
+              ))}
             </nav>
           </div>
 
@@ -73,10 +61,10 @@ export function Footer() {
                 +7 (916) 481-07-69
               </a>
               <a
-                href="mailto:info@mahorkamarket.ru"
+                href="mailto:info@mahorkamarket.store"
                 className="text-sm text-subtext-on-dark hover:text-color-accent hover:translate-x-1 transition-all duration-300 inline-block"
               >
-                info@mahorkamarket.ru
+                info@mahorkamarket.store
               </a>
               <span className="text-xs text-subtext-on-dark opacity-60">По вопросам сотрудничества</span>
             </div>
@@ -100,7 +88,7 @@ export function Footer() {
             для хозяйственных и технических целей.
           </p>
           <p className="text-xs md:text-sm text-subtext-on-dark text-center opacity-60">
-            © {new Date().getFullYear()} АгроСнаб. Все права защищены.
+            © {new Date().getFullYear()} ТопХит. Все права защищены.
           </p>
           <p className="text-xs md:text-sm text-subtext-on-dark text-center opacity-60">
             Сайт разработан командой{' '}
