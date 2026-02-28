@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { Product, isInStock, getCtaText, getTelegramDeepLink, PLACEHOLDER_IMAGE } from '../lib/catalog';
 
 interface ProductCardProps {
@@ -9,14 +10,20 @@ export function ProductCard({ product }: ProductCardProps) {
   const inStock = isInStock(product);
   const ctaText = getCtaText(product);
   const telegramLink = getTelegramDeepLink(sku);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.src = PLACEHOLDER_IMAGE;
   };
 
+  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+
   return (
     <div className="rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col h-full group border-2 border-white/80" style={{ backgroundColor: '#FFF8F0' }}>
-      <div className="relative w-full h-48 md:h-56 bg-[#FFF8F0] flex-shrink-0 overflow-hidden p-2">
+      <div
+        className="relative w-full h-48 md:h-56 bg-[#FFF8F0] flex-shrink-0 overflow-hidden cursor-pointer"
+        onClick={() => setLightboxOpen(true)}
+      >
         {!inStock && (
           <div className="absolute top-3 right-3 z-10 bg-gray-600 text-white text-xs font-medium px-2.5 py-1 rounded-full shadow-md">
             Нет в наличии
@@ -25,10 +32,32 @@ export function ProductCard({ product }: ProductCardProps) {
         <img
           src={photoUrl}
           alt={name}
-          className="w-full h-full object-contain transition-transform duration-500"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={handleImageError}
         />
       </div>
+
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={closeLightbox}
+        >
+          <button
+            className="absolute top-4 right-4 text-white text-3xl font-light hover:text-gray-300 transition-colors z-10 leading-none"
+            onClick={closeLightbox}
+            aria-label="Закрыть"
+          >
+            &times;
+          </button>
+          <img
+            src={photoUrl}
+            alt={name}
+            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            onError={handleImageError}
+          />
+        </div>
+      )}
 
       <div className="p-5 md:p-6 flex flex-col flex-grow justify-between">
         <div className="mb-4 min-h-[72px] flex flex-col justify-start">
