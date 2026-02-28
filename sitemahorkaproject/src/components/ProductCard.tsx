@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Product, isInStock, getCtaText, getTelegramDeepLink, PLACEHOLDER_IMAGE } from '../lib/catalog';
 
 interface ProductCardProps {
@@ -16,14 +17,34 @@ export function ProductCard({ product }: ProductCardProps) {
     e.currentTarget.src = PLACEHOLDER_IMAGE;
   };
 
-  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+  const openLightbox = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setLightboxOpen(true);
+  }, []);
+
+  const closeLightbox = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setLightboxOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    document.body.style.overflow = 'hidden';
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxOpen(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [lightboxOpen]);
 
   return (
     <div className="rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col h-full group border-2 border-white/80" style={{ backgroundColor: '#FFF8F0' }}>
-      <div
-        className="relative w-full h-48 md:h-56 bg-[#FFF8F0] flex-shrink-0 overflow-hidden cursor-pointer"
-        onClick={() => setLightboxOpen(true)}
-      >
+      <div className="relative w-full h-48 md:h-56 bg-[#FFF8F0] flex-shrink-0 overflow-hidden">
         {!inStock && (
           <div className="absolute top-3 right-3 z-10 bg-gray-600 text-white text-xs font-medium px-2.5 py-1 rounded-full shadow-md">
             Нет в наличии
@@ -35,15 +56,22 @@ export function ProductCard({ product }: ProductCardProps) {
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={handleImageError}
         />
+        <button
+          onClick={openLightbox}
+          className="absolute bottom-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full w-8 h-8 flex items-center justify-center transition-colors"
+          aria-label="Увеличить фото"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        </button>
       </div>
 
-      {lightboxOpen && (
+      {lightboxOpen && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-4"
           onClick={closeLightbox}
         >
           <button
-            className="absolute top-4 right-4 text-white text-3xl font-light hover:text-gray-300 transition-colors z-10 leading-none"
+            className="absolute top-4 right-4 text-white text-4xl font-light hover:text-gray-300 transition-colors z-10 leading-none w-10 h-10 flex items-center justify-center"
             onClick={closeLightbox}
             aria-label="Закрыть"
           >
@@ -56,7 +84,8 @@ export function ProductCard({ product }: ProductCardProps) {
             onClick={(e) => e.stopPropagation()}
             onError={handleImageError}
           />
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="p-5 md:p-6 flex flex-col flex-grow justify-between">
