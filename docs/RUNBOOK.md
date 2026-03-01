@@ -1,50 +1,70 @@
 # Операционные процедуры (Runbook)
 
-## GitHub Pages деплой (Сайт)
+**Обновлено:** 2026-03-01
+
+---
+
+## Деплой сайта (GitHub Pages)
 
 Сайт автоматически деплоится через GitHub Actions при push в `main`.
 
 **Workflow:** `.github/workflows/deploy.yml`
 
 **Процесс:**
-1. Push в `main` → запускается GitHub Actions
-2. Сборка: `npm run build`
-3. Деплой: `dist/` → GitHub Pages
+1. Push в `main` -> запускается GitHub Actions
+2. Setup Node.js 18 + `npm ci`
+3. Сборка: `npm run build`
+4. Upload `dist/` -> GitHub Pages
 
 **Конфигурация:**
 - `.env.production` содержит `VITE_APPS_SCRIPT_URL` для production
-- Base path: `/agrosnab/` (настроен в `vite.config.ts`)
+- Base path: `/` (настроен в `vite.config.ts`)
+- Dev-сервер: порт 8300
 
 **Проверка статуса:**
-- Actions: https://github.com/[owner]/[repo]/actions
-- Сайт: https://[owner].github.io/agrosnab/
+- Actions: `https://github.com/[owner]/[repo]/actions`
+- Сайт: `https://[owner].github.io/[repo]/`
+
+### Netlify (альтернатива)
+
+Конфигурация в `netlify.toml`:
+- Build command: `npm run build`
+- Publish directory: `dist`
+- SPA fallback: `/* -> /index.html` (status 200)
+
+### Ручной деплой
+
+```bash
+npm run build
+# Загрузите содержимое dist/ на хостинг
+```
 
 ---
 
 ## CI Pipeline
 
-Автоматическая проверка при push/PR.
+Автоматическая проверка при push/PR в `main`/`master`.
 
 **Workflow:** `.github/workflows/ci.yml`
 
-**Проверки для обоих ботов:**
-- `ruff check` — линтер Python
-- `ruff format --check` — проверка форматирования
-- `pytest` — запуск тестов
+**Jobs:**
+
+| Job | Описание |
+|-----|----------|
+| `lint-shop-bot` | ruff check + format для `app/` и `tests/` |
+| `lint-owner-bot` | ruff check + format для `owner_bot/app/` и `owner_bot/tests/` |
+| `test-shop-bot` | pytest для Shop Bot (~255 тестов) |
+| `test-owner-bot` | pytest для Owner Bot |
 
 **Запуск локально:**
 ```bash
-# Shop Bot (255 тестов)
-ruff check app/ && ruff format --check app/ && uv run pytest tests/ -v
+# Shop Bot
+ruff check app/ && ruff format --check app/ && uv run pytest tests/ -q
 
 # Owner Bot
 cd owner_bot
-ruff check app/ && ruff format --check app/ && uv run pytest tests/ -v
+ruff check app/ && ruff format --check app/ && uv run pytest tests/ -q
 ```
-
-**Ожидаемые результаты:**
-- Shop Bot: 255 passed
-- Owner Bot: 16+ passed (intake flow tests)
 
 ---
 
@@ -63,11 +83,20 @@ docker compose logs -f bot
 docker compose down
 ```
 
+**Docker-образ:** Python 3.11-slim + fonts-dejavu-core (для русского текста в PDF).
+
+**Volumes:**
+- `./secrets:/run/secrets:ro` -- сервисный аккаунт Google (read-only)
+- `./data:/app/data` -- SQLite база + PDF-счета
+
+**Перезапуск:** `restart: unless-stopped` (автоматический)
+
 ### Owner Bot
 
 ```bash
-# Из owner_bot/
 cd owner_bot
+
+# Запуск
 docker compose up --build -d
 
 # Логи
@@ -89,44 +118,34 @@ cd owner_bot && docker compose up --build -d
 
 ---
 
-## Деплой (Сайт)
-
-### Production-сборка
-
-```bash
-npm run build
-```
-
-Результат в папке `dist/`. Деплой статических файлов на хостинг.
-
-### Vercel / Netlify
-
-1. Подключите репозиторий
-2. Build command: `npm run build`
-3. Output directory: `dist`
-4. Environment variables: добавьте `VITE_APPS_SCRIPT_URL`
-
-### Ручной деплой
-
-```bash
-npm run build
-# Загрузите содержимое dist/ на сервер
-```
-
 ## Мониторинг
 
-### Проверка работоспособности
+### Проверка работоспособности сайта
 
-1. **Сайт загружается** — откройте URL, проверьте отображение
-2. **Каталог загружается** — в разделе "Ассортимент" должны быть товары
-3. **Кеш работает** — повторная загрузка не делает запрос (DevTools → Network)
+1. **Сайт загружается** -- откройте URL, проверьте отображение
+2. **Каталог загружается** -- в разделе "Ассортимент" должны быть товары
+3. **Кеш работает** -- повторная загрузка не делает запрос (DevTools -> Network)
 
-### Логи ошибок
+### Логи ошибок (фронтенд)
 
 Ошибки логируются в `console.error`:
-- `VITE_APPS_SCRIPT_URL не настроен` — отсутствует переменная окружения
-- `Apps Script error: ...` — ошибка от Google Sheets
-- `Ошибка загрузки каталога: ...` — сетевая ошибка
+- `VITE_APPS_SCRIPT_URL не настроен` -- отсутствует переменная окружения
+- `Apps Script error: ...` -- ошибка от Google Sheets
+- `Ошибка загрузки каталога: ...` -- сетевая ошибка
+
+### Логи Shop Bot
+
+```bash
+# Просмотр логов в реальном времени
+docker compose logs -f bot
+
+# Поиск ошибок
+docker compose logs bot 2>&1 | grep ERROR
+```
+
+Формат логов: `%(asctime)s - %(name)s - %(levelname)s - %(message)s`
+
+Подавлены шумные логи от `httpx` и `httpcore` (уровень WARNING).
 
 ### Логи Owner Bot
 
@@ -139,26 +158,33 @@ LOG_LEVEL=DEBUG docker compose up
 ```
 
 **Уровни логирования:**
-- `DEBUG` — детальная информация для отладки
-- `INFO` — стандартные события (по умолчанию)
-- `WARNING` — предупреждения
-- `ERROR` — ошибки
+- `DEBUG` -- детальная информация для отладки
+- `INFO` -- стандартные события (по умолчанию)
+- `WARNING` -- предупреждения
+- `ERROR` -- ошибки
+
+### Sentry (Owner Bot)
+
+Если настроен `SENTRY_DSN`, ошибки автоматически отправляются в Sentry.
+Переменная `ENVIRONMENT` определяет окружение (`production`/`staging`/`development`).
+
+---
 
 ## Частые проблемы
 
 ### Каталог не загружается
 
-**Симптом:** Бесконечный спиннер или ошибка
+**Симптом:** Бесконечный спиннер или ошибка на сайте.
 
 **Диагностика:**
 ```bash
-curl -sL "$VITE_APPS_SCRIPT_URL"
+curl -sL "$VITE_APPS_SCRIPT_URL" | head -200
 ```
 
 **Возможные причины:**
-1. Неверный URL Apps Script → проверьте `.env`
-2. Apps Script не задеплоен → передеплойте в Google Apps Script
-3. CORS — Apps Script должен быть доступен "Anyone"
+1. Неверный URL Apps Script -> проверьте `.env` / `.env.production`
+2. Apps Script не задеплоен -> передеплойте в Google Apps Script
+3. CORS -> Apps Script должен быть доступен "Anyone" (не "Anyone with Google Account")
 
 ### Товары не отображаются
 
@@ -166,7 +192,7 @@ curl -sL "$VITE_APPS_SCRIPT_URL"
 
 **Проверьте:**
 1. В Google Sheets есть товары с `Активен = TRUE`
-2. Колонки называются правильно (SKU, Активен, и т.д.)
+2. Колонки называются правильно (SKU, Наименование, Цена_руб и т.д.)
 3. Apps Script возвращает `items` в JSON
 
 ### Фото не загружаются
@@ -178,18 +204,32 @@ curl -sL "$VITE_APPS_SCRIPT_URL"
 2. Фото недоступно (приватный Google Drive)
 3. CORS-ограничения
 
-**Решение:** Используйте публичные URL (Cloudinary рекомендуется)
+**Решение:** Используйте публичные URL. Cloudinary рекомендуется для Owner Bot.
 
 ### Вес упаковки не отображается
 
-**Симптом:** Вес не показывается в кнопке товара
+**Симптом:** Вес не показывается в кнопке товара.
 
 **Проверьте:**
 1. Колонка `Вес_упаковки` существует в листе "Склад"
 2. Значение не пустое и > 0
 3. Формат: число в граммах (например, 500 для 500г)
 
-**Примечание:** weight=0 намеренно не отображается (считается как "не указан")
+**Примечание:** weight=0 намеренно не отображается (считается как "не указан").
+
+### Бот не запускается
+
+**Симптом:** Контейнер перезапускается в цикле.
+
+**Диагностика:**
+```bash
+docker compose logs bot | tail -50
+```
+
+**Частые причины:**
+1. Невалидный `TELEGRAM_BOT_TOKEN` -> проверьте через `curl https://api.telegram.org/bot<TOKEN>/getMe`
+2. Файл `service-account.json` не найден -> проверьте путь в `GOOGLE_SERVICE_ACCOUNT_JSON_PATH`
+3. Неверный `GOOGLE_SHEETS_ID` -> проверьте ID или URL таблицы
 
 ### Ошибка валидации веса в Owner Bot
 
@@ -198,66 +238,69 @@ curl -sL "$VITE_APPS_SCRIPT_URL"
 **Причины:**
 1. Введено не число
 2. Вес <= 0
-3. Вес > 100000 (100кг — максимум)
+3. Вес > 100000 (100кг -- максимум)
 
-**Решение:** Введите число от 1 до 100000 или нажмите "Пропустить"
+**Решение:** Введите число от 1 до 100000 или нажмите "Пропустить".
 
 ### Сессия intake истекла
 
-**Симптом:** "Сессия истекла" при продолжении ввода
+**Симптом:** "Сессия истекла" при продолжении ввода.
 
-**Причина:** TTL сессии 24 часа, бот перезапустился, или SQLite база недоступна
+**Причина:** TTL сессии 24 часа, бот перезапустился, или SQLite база недоступна.
 
-**Решение:** Начните приход заново командой "📦 Приход товара"
+**Решение:** Начните приход заново.
 
 ### Уведомления о заказах не приходят
 
-**Симптом:** Управляющий не получает уведомления о новых заказах
+**Симптом:** Управляющий не получает уведомления о новых заказах.
 
 **Проверьте:**
-1. `OWNER_BOT_TOKEN` указан в `.env` shop bot
+1. `OWNER_BOT_TOKEN` указан в `.env` Shop Bot
 2. `OWNER_TELEGRAM_IDS` содержит правильные ID через запятую
 3. Управляющий ранее писал `/start` в бот управляющего
 
 **Логи:**
 ```bash
-docker compose logs bot | grep "notify owner"
+docker compose logs bot 2>&1 | grep "notify"
 ```
 
-### Счёт-фактура не отправляется
+### Счет-фактура не отправляется
 
-**Симптом:** Заказ оформлен, но PDF не приходит
+**Симптом:** Заказ оформлен, но PDF не приходит.
 
-**Причина:** Директория `/app/data/invoices/` не создалась
+**Причина:** Директория `/app/data/invoices/` не создалась или нет прав на запись.
 
-**Решение:** Директория создаётся автоматически (`os.makedirs`). Проверьте права на volume `./data:/app/data`.
+**Решение:** Проверьте Docker volume `./data:/app/data`. Директория создается автоматически через `os.makedirs`.
 
-### «Повторить заказ» не работает
+### "Повторить заказ" не работает
 
 **Симптом:** "У вас пока нет заказов"
 
 **Причина:** История заказов сохраняется с момента добавления фичи. Предыдущие заказы не в `user_orders`.
 
-**Решение:** Оформите новый заказ — он сохранится для повторения.
+**Решение:** Оформите новый заказ -- он сохранится для повторения.
+
+---
 
 ## SQLite (Shop Bot)
 
-База: `data/bot.sqlite3` (автосоздаётся при первом запуске)
+База: `data/bot.sqlite3` (автосоздается при первом запуске).
 
 **Таблицы:**
+
 | Таблица | Назначение |
 |---------|-----------|
 | `cart_items` | Текущая корзина пользователя |
 | `checkout_sessions` | Идемпотентность чекаута |
 | `order_counter` | Порядковая нумерация ORD-000001 |
-| `user_profiles` | Сохранённые телефон, ФИО, адрес |
-| `user_orders` | История заказов для «Повторить заказ» |
+| `user_profiles` | Сохраненные телефон, ФИО, адрес |
+| `user_orders` | История заказов для "Повторить заказ" |
 | `user_mode` | AI/обычный режим |
 | `chat_history` | История чата с AI-менеджером |
 | `crm_events` | CRM-события (add_to_cart, checkout, order) |
 | `crm_messages` | CRM-сообщения пользователей |
 
-**Просмотр:**
+**Просмотр содержимого (через Docker):**
 ```bash
 docker compose exec bot python -c "
 import sqlite3; db=sqlite3.connect('/app/data/bot.sqlite3')
@@ -266,29 +309,56 @@ for t in db.execute(\"SELECT name FROM sqlite_master WHERE type='table'\").fetch
 "
 ```
 
+**Просмотр локально:**
+```bash
+sqlite3 data/bot.sqlite3 ".tables"
+sqlite3 data/bot.sqlite3 "SELECT COUNT(*) FROM cart_items"
+```
+
 ---
 
 ## Rollback
 
-### Откат кода
+### Откат кода (сайт)
 
 ```bash
 git revert HEAD
-npm run build
-# Деплой
+git push origin main
+# GitHub Actions автоматически задеплоит
 ```
 
-### Откат данных
+### Откат кода (боты)
 
-Данные в Google Sheets — используйте историю версий Google Sheets:
-1. Файл → История версий → Смотреть историю версий
+```bash
+git revert HEAD
+docker compose up --build -d
+```
+
+### Откат данных Google Sheets
+
+Данные в Google Sheets -- используйте историю версий:
+1. Файл -> История версий -> Смотреть историю версий
 2. Выберите нужную версию
 3. Восстановите
 
+### Откат SQLite (Shop Bot)
+
+```bash
+# Остановить бот
+docker compose down
+
+# Восстановить из бэкапа (если есть)
+cp data/bot.sqlite3.backup data/bot.sqlite3
+
+# Запустить бот
+docker compose up -d
+```
+
 ### Откат Owner Bot базы
 
-SQLite база находится в `data/owner_bot.db`. Для отката:
 ```bash
+cd owner_bot
+
 # Остановить бот
 docker compose down
 
@@ -299,14 +369,17 @@ cp data/owner_bot.db.backup data/owner_bot.db
 docker compose up -d
 ```
 
+---
+
 ## Google Apps Script
 
 ### Передеплой Apps Script
 
-1. Google Sheets → Extensions → Apps Script
-2. Deploy → Manage deployments
+1. Google Sheets -> Extensions -> Apps Script
+2. Deploy -> Manage deployments
 3. Создайте новый deployment или обновите существующий
-4. Скопируйте новый URL в `.env`
+4. Скопируйте новый URL в `.env` / `.env.production`
+5. Для GitHub Pages: закоммитьте `.env.production` и push в `main`
 
 ### Код Apps Script
 
@@ -314,26 +387,60 @@ docker compose up -d
 
 При изменениях в структуре Google Sheets обновите маппинг колонок в `COLUMNS`.
 
+---
+
 ## Безопасность
 
-### Проверка npm уязвимостей
+### Проверка npm-уязвимостей
 
 ```bash
 npm audit
 npm audit fix
 ```
 
-**Текущий статус:** 3 moderate vulnerabilities (esbuild/vite) — требуют major version upgrade
-
 ### Ротация секретов
 
-1. **Telegram Bot Token:** @BotFather → Revoke current token
-2. **Google Service Account:** Google Cloud Console → IAM → Service Accounts → Keys
-3. **Cloudinary:** Cloudinary Console → Settings → Security
+| Секрет | Где обновить |
+|--------|-------------|
+| Telegram Bot Token | @BotFather -> Revoke current token; обновить `.env` |
+| Google Service Account | Google Cloud Console -> IAM -> Service Accounts -> Keys |
+| Cloudinary | Cloudinary Console -> Settings -> Security |
+| OpenAI API Key | OpenAI Platform -> API Keys |
 
-После ротации обновите `.env` и перезапустите ботов.
+После ротации:
+1. Обновите `.env`
+2. Перезапустите ботов: `docker compose up --build -d`
+
+### Файлы, которые не должны попасть в Git
+
+Проверьте `.gitignore`:
+- `.env` (все кроме `.env.example` и `.env.production`)
+- `secrets/` (все кроме `README.txt`)
+- `data/` (все кроме `README.txt`)
+- `*.sqlite3`, `*.db`
+
+---
+
+## Бэкапы
+
+### Google Sheets
+Автоматическая история версий Google. Дополнительно рекомендуется периодический экспорт.
+
+### SQLite базы
+```bash
+# Shop Bot
+cp data/bot.sqlite3 data/bot.sqlite3.backup
+
+# Owner Bot
+cp owner_bot/data/owner_bot.db owner_bot/data/owner_bot.db.backup
+```
+
+Рекомендуется автоматизировать через cron на production-сервере.
+
+---
 
 ## Контакты
 
 При критических проблемах:
-- Telegram-бот: @mahoorka_bot
+- Shop Bot: @mahoorka_bot
+- Owner Bot: @tophitboss_bot
