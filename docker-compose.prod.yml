@@ -1,0 +1,51 @@
+# Production docker-compose: боты на VPS, сайт на GitHub Pages
+# Запуск: docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  # Shop Bot (@mahoorka_bot)
+  shop-bot:
+    build: .
+    container_name: shop-bot
+    env_file: .env
+    volumes:
+      - ./secrets:/run/secrets:ro
+      - ./data:/app/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "python", "-c", "print('ok')"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # Owner Bot (@tophitboss_bot)
+  owner-bot:
+    build: ./owner_bot
+    container_name: owner-bot
+    env_file: ./owner_bot/.env
+    volumes:
+      - ./owner_bot/tmp:/app/tmp
+      - ./owner_bot/data:/app/data
+      - ./secrets:/app/secrets:ro
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "python", "-c", "print('ok')"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+
+  # React Site → GitHub Pages (www.makhorkamarket.store)
+  # Деплой автоматический через GitHub Actions при пуше в main

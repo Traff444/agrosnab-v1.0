@@ -52,7 +52,8 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
         <img
           src={photoUrl}
-          alt={name}
+          alt={`${name} — купить махорку в Махорка Маркет`}
+          loading="lazy"
           className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105 p-2"
           onError={handleImageError}
         />
@@ -104,9 +105,9 @@ export function ProductCard({ product }: ProductCardProps) {
               {priceRub.toLocaleString('ru-RU')} ₽
             </span>
           )}
-          {stock > 0 && (
+          {inStock && (
             <span className="text-xs text-subtext-on-light">
-              ✔ {stock} шт
+              ✔ {product.infiniteStock ? 'В наличии' : `${stock} шт`}
             </span>
           )}
         </div>

@@ -306,7 +306,7 @@ def register_cart_handlers(
         await cb.message.answer(text, parse_mode="HTML", reply_markup=main_menu_kb())
         await cb.answer()
 
-    @dp.message(F.text == "🧺 Корзина")
+    @dp.message(F.text.endswith("Корзина"))
     async def text_cart(m: Message):
         summary = await cart_service.get_cart_summary(m.from_user.id)
         text = cart_service.format_cart_text(summary)

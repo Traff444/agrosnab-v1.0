@@ -39,7 +39,7 @@ def register_catalog_handlers(
 ) -> None:
     """Register catalog handlers."""
 
-    @dp.message(F.text == "🗂 Каталог")
+    @dp.message(F.text.endswith("Каталог"))
     async def text_catalog(m: Message):
         user_id = m.from_user.id
 

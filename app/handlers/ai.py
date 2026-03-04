@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery, Message
 from .. import cart_store
 from ..ai_manager import run_ai
 from ..config import Settings
-from ..keyboards import cart_kb
+from ..keyboards import cart_kb, main_menu_kb
 from ..services import CartService, ProductService
 
 logger = logging.getLogger(__name__)
@@ -23,11 +23,11 @@ def register_ai_handlers(
 ) -> None:
     """Register AI manager handlers."""
 
-    @dp.message(F.text == "🤖 AI Менеджер")
+    @dp.message(F.text.endswith("AI Менеджер"))
     async def text_ai(m: Message):
         await cart_store.set_ai_mode(m.from_user.id, True)
         await m.answer(
-            "🤖 *AI Менеджер включён!*\n\n"
+            "🤖 <b>AI Менеджер включён!</b>\n\n"
             "Напишите что вам нужно, например:\n"
             "• «Что у вас есть?»\n"
             "• «Покажи махорку»\n"
@@ -51,6 +51,10 @@ def register_ai_handlers(
         ai_mode = await cart_store.get_ai_mode(m.from_user.id)
         logger.debug(f"ai_mode={ai_mode}")
         if not ai_mode:
+            await m.answer(
+                "📋 Выберите действие:",
+                reply_markup=main_menu_kb(),
+            )
             return
 
         cfg = Settings()

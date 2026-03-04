@@ -73,7 +73,7 @@ def register_start_handlers(
             reply_markup=main_menu_kb(cart_count),
         )
 
-    @dp.message(F.text == "📋 Меню")
+    @dp.message(F.text.endswith("Меню"))
     async def text_menu(m: Message):
         cart_count = await cart_store.get_cart_count(m.from_user.id)
         await m.answer(

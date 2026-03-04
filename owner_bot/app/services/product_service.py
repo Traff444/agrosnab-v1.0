@@ -127,6 +127,20 @@ class ProductService:
         self._cache.invalidate()
         return result
 
+    async def toggle_infinite_stock(
+        self,
+        product: Product,
+        updated_by: str = "owner_bot",
+    ) -> Product:
+        """Toggle product infinite stock flag."""
+        result = await sheets_client.update_product_infinite_stock(
+            product=product,
+            infinite_stock=not product.infinite_stock,
+            updated_by=updated_by,
+        )
+        self._cache.invalidate()
+        return result
+
     async def toggle_active(
         self,
         product: Product,
@@ -168,11 +182,12 @@ class ProductService:
         """Format product as a card message."""
         status = "✅ Активен" if product.active else "❌ Неактивен"
 
+        stock_display = "♾ Бесконечный" if product.infinite_stock else f"{product.stock} шт."
         lines = [
             f"**{product.name}**",
             f"SKU: `{product.sku}`",
             f"💰 Цена: {product.price:.2f} ₽",
-            f"📦 Остаток: {product.stock} шт.",
+            f"📦 Остаток: {stock_display}",
             f"Статус: {status}",
         ]
 

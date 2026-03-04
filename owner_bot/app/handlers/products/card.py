@@ -12,6 +12,7 @@ from app.keyboards import (
     product_actions_keyboard,
     product_more_keyboard,
 )
+from app.sheets import sheets_client
 from app.services.product_service import product_service
 
 router = Router()
@@ -82,6 +83,34 @@ async def handle_product_photo(callback: CallbackQuery, state: FSMContext) -> No
             f"📷 Отправьте новое фото для **{product.name}**:",
             reply_markup=cancel_keyboard(),
         )
+
+
+@router.callback_query(F.data.startswith("product_infinite_"))
+async def handle_product_infinite_stock(callback: CallbackQuery) -> None:
+    """Toggle infinite stock for product."""
+    if not callback.data:
+        return
+
+    row_number = int(callback.data.replace("product_infinite_", ""))
+    products = await product_service.get_all()
+    product = next((p for p in products if p.row_number == row_number), None)
+
+    if not product:
+        await callback.answer("Товар не найден", show_alert=True)
+        return
+
+    actor = callback.from_user.username or str(callback.from_user.id) if callback.from_user else "unknown"
+    updated = await product_service.toggle_infinite_stock(product, updated_by=actor)
+
+    status = "включён ♾" if updated.infinite_stock else "выключен"
+    await callback.answer(f"Бесконечный остаток {status}", show_alert=True)
+
+    try:
+        await callback.message.edit_reply_markup(
+            reply_markup=product_more_keyboard(updated)
+        )
+    except TelegramBadRequest as e:
+        logger.debug("Cannot edit reply markup for infinite stock: %s", e)
 
 
 @router.callback_query(F.data.startswith("product_edit_"))

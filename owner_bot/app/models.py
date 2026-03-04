@@ -79,6 +79,7 @@ class Product:
     description: str = ""
     tags: str = ""
     active: bool = True
+    infinite_stock: bool = False
     package_weight: int | None = None
     last_intake_at: datetime | None = None
     last_intake_qty: int | None = None
@@ -127,6 +128,8 @@ class Product:
             description=str(get_val("Описание_кратко", "")),
             tags=str(get_val("Теги", "")),
             active=str(get_val("Активен", "да")).lower() in ("true", "да", "yes", "1"),
+            infinite_stock=str(get_val("Бесконечный_остаток", "")).lower()
+            in ("true", "да", "yes", "1"),
             package_weight=package_weight,
             last_intake_at=None,  # Parsed separately if needed
             last_intake_qty=int(get_val("last_intake_qty", 0) or 0) or None,

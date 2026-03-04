@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/agrosnab-v1.0/',
+  base: '/',
   plugins: [react()],
   server: {
     port: 7004,

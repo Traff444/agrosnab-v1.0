@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /assets/
+
+# Yandex
+User-agent: Yandex
+Allow: /
+Disallow: /assets/
+Clean-param: callback
+
+Sitemap: https://www.makhorkamarket.store/sitemap.xml
+Host: https://www.makhorkamarket.store

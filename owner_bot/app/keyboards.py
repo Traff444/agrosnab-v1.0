@@ -132,8 +132,15 @@ def product_actions_keyboard(product: Product) -> InlineKeyboardMarkup:
 
 def product_more_keyboard(product: Product) -> InlineKeyboardMarkup:
     """Additional actions menu."""
+    inf_label = "♾ Убрать бесконечный" if product.infinite_stock else "♾ Бесконечный остаток"
     return InlineKeyboardMarkup(
         inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=inf_label,
+                    callback_data=f"product_infinite_{product.row_number}",
+                ),
+            ],
             [
                 InlineKeyboardButton(
                     text="✏️ Редактировать", callback_data=f"product_edit_{product.row_number}"
@@ -340,8 +347,9 @@ def stock_list_keyboard(
     for p in products:
         status = "✅" if p.active else "❌"
         weight = f" {p.package_weight}г" if p.package_weight else ""
+        stock_label = "♾" if p.infinite_stock else f"{p.stock} шт."
         name_max = 25 - len(weight)
-        label = f"{status} {p.name[:name_max]}{weight} ({p.stock} шт.)"
+        label = f"{status} {p.name[:name_max]}{weight} ({stock_label})"
         buttons.append(
             [InlineKeyboardButton(text=label, callback_data=f"stock_select_{p.row_number}")]
         )

@@ -22,6 +22,7 @@ OPTIONAL_COLUMNS = [
     "Внесено_всего",
     "Списано_всего",
     "Поставщик_ID",
+    "Бесконечный_остаток",
     "last_intake_at",
     "last_intake_qty",
     "last_updated_by",

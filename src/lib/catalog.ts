@@ -7,6 +7,7 @@ export interface Product {
   descriptionFull: string;
   priceRub: number;
   stock: number;
+  infiniteStock: boolean;
   photoUrl: string;
   tags: string[];
 }
@@ -45,7 +46,7 @@ function isValidImageUrl(url: string): boolean {
  * Проверяет, есть ли товар в наличии
  */
 export function isInStock(product: Product): boolean {
-  return product.stock > 0;
+  return product.infiniteStock || product.stock > 0;
 }
 
 /**
@@ -84,6 +85,7 @@ function normalizeProduct(raw: Record<string, unknown>): Product {
     descriptionFull: String(raw.descriptionFull || ''),
     priceRub: parseNum(raw.priceRub),
     stock: parseNum(raw.stock),
+    infiniteStock: raw.infiniteStock === true || String(raw.infiniteStock).toLowerCase() === 'true',
     photoUrl: photoUrl || PLACEHOLDER_IMAGE,
     tags: tagsRaw
       .split(',')

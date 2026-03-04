@@ -12,6 +12,7 @@ class Product:
     desc_full: str
     price_rub: int
     stock: int
+    infinite_stock: bool
     supplier_id: str
     photo_url: str
     active: bool

@@ -10,7 +10,7 @@ export function HeroSection() {
         {/* Mobile Image */}
         <img
           src={`${import.meta.env.BASE_URL}hiro%20mobil1.png`}
-          alt=""
+          alt="Сельскохозяйственная махорка — оптовые поставки от ООО ТОПХИТ"
           className="h-full w-full object-cover object-center md:hidden"
           draggable={false}
         />
@@ -134,7 +134,9 @@ export function HeroSection() {
           {/* ZONE 1: TOP CONTENT (auto) - Заголовок + подзаголовок */}
           <div className="max-w-[620px] pt-8 sm:pt-10 lg:max-w-[600px] lg:pt-12">
             {/* Заголовок - ограничен по ширине на desktop (12-14ch) */}
-            <h1
+            <p
+              role="heading"
+              aria-level={1}
               className="
                 text-white font-semibold tracking-tight
                 max-w-[20ch]
@@ -146,7 +148,7 @@ export function HeroSection() {
                 Сельскохозяйственная
               </span>
               <span className="block font-medium lg:inline -mt-[28px] lg:-mt-[28px] mb-0 -ml-1 brygada-1918" style={{ fontSize: '45px', lineHeight: '1.1' }}>махорка оптом</span>
-            </h1>
+            </p>
 
             {/* Подзаголовок - слабее визуально (opacity), правильный spacing (12-16px) */}
             <p

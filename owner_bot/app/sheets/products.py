@@ -174,6 +174,7 @@ class ProductOperationsMixin:
             description=description,
             tags=tags,
             active=True,
+            infinite_stock=False,
             package_weight=package_weight,
             last_intake_at=datetime.now(),
             last_intake_qty=quantity,
@@ -255,6 +256,7 @@ class ProductOperationsMixin:
             description=product.description,
             tags=product.tags,
             active=product.active,
+            infinite_stock=product.infinite_stock,
             package_weight=product.package_weight,
             last_intake_at=datetime.now(),
             last_intake_qty=quantity_delta,
@@ -305,6 +307,61 @@ class ProductOperationsMixin:
             description=product.description,
             tags=product.tags,
             active=product.active,
+            infinite_stock=product.infinite_stock,
+            package_weight=product.package_weight,
+            last_intake_at=product.last_intake_at,
+            last_intake_qty=product.last_intake_qty,
+            last_updated_by=updated_by,
+        )
+
+    async def update_product_infinite_stock(
+        self: BaseSheetsClient,
+        product: Product,
+        infinite_stock: bool,
+        updated_by: str = "owner_bot",
+    ) -> Product:
+        """Update product infinite stock flag."""
+        settings = get_settings()
+
+        updates = []
+
+        if "Бесконечный_остаток" in self._col_map:
+            col = self._col_letter(self._col_map["Бесконечный_остаток"])
+            updates.append(
+                {
+                    "range": f"{self._sheet_name}!{col}{product.row_number}",
+                    "values": [["TRUE" if infinite_stock else "FALSE"]],
+                }
+            )
+
+        if "last_updated_by" in self._col_map:
+            col = self._col_letter(self._col_map["last_updated_by"])
+            updates.append(
+                {
+                    "range": f"{self._sheet_name}!{col}{product.row_number}",
+                    "values": [[updated_by]],
+                }
+            )
+
+        if updates:
+            self.service.spreadsheets().values().batchUpdate(
+                spreadsheetId=settings.google_sheets_id,
+                body={"valueInputOption": "USER_ENTERED", "data": updates},
+            ).execute()
+
+        self.invalidate_products_cache()
+
+        return Product(
+            row_number=product.row_number,
+            sku=product.sku,
+            name=product.name,
+            price=product.price,
+            stock=product.stock,
+            photo_url=product.photo_url,
+            description=product.description,
+            tags=product.tags,
+            active=product.active,
+            infinite_stock=infinite_stock,
             package_weight=product.package_weight,
             last_intake_at=product.last_intake_at,
             last_intake_qty=product.last_intake_qty,
@@ -355,6 +412,7 @@ class ProductOperationsMixin:
             description=product.description,
             tags=product.tags,
             active=active,
+            infinite_stock=product.infinite_stock,
             package_weight=product.package_weight,
             last_intake_at=product.last_intake_at,
             last_intake_qty=product.last_intake_qty,

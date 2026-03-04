@@ -3,6 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'sitemahorkaproject/**'
   workflow_dispatch:
 
 permissions:
@@ -29,11 +31,16 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: sitemahorkaproject/package-lock.json
 
       - name: Install dependencies
+        working-directory: sitemahorkaproject
         run: npm ci
 
       - name: Build
+        working-directory: sitemahorkaproject
+        env:
+          VITE_APPS_SCRIPT_URL: ${{ vars.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzJ31qZN_j6opR-uEteEdZbo1w6GjXUyQWdr9Lmjp384jjrvyE7smmPqVQz2TMC12oS/exec' }}
         run: npm run build
 
       - name: Setup Pages
@@ -42,7 +49,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: sitemahorkaproject/dist
 
       - name: Deploy to GitHub Pages
         id: deployment

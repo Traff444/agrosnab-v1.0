@@ -40,7 +40,8 @@ const COLUMNS = {
   STOCK: 'Остаток_расчет',
   PHOTO: 'Фото_URL',
   ACTIVE: 'Активен',
-  TAGS: 'Теги'
+  TAGS: 'Теги',
+  INFINITE_STOCK: 'Бесконечный_остаток'
 };
 
 // Регулярные выражения для валидации
@@ -92,6 +93,11 @@ function doGet(e) {
 
     const parseNum = (val) => parseFloat(String(val).replace(',', '.')) || 0;
 
+    const infRaw = colMap[COLUMNS.INFINITE_STOCK] !== undefined
+      ? String(row[colMap[COLUMNS.INFINITE_STOCK]] || '').toLowerCase().trim()
+      : '';
+    const infiniteStock = infRaw === 'true' || infRaw === 'да' || infRaw === 'yes' || infRaw === '1';
+
     items.push({
       sku: sku,
       name: String(row[colMap[COLUMNS.NAME]] || ''),
@@ -99,6 +105,7 @@ function doGet(e) {
       descriptionFull: String(row[colMap[COLUMNS.DESC_FULL]] || ''),
       priceRub: parseNum(row[colMap[COLUMNS.PRICE]]),
       stock: parseNum(row[colMap[COLUMNS.STOCK]]),
+      infiniteStock: infiniteStock,
       photoUrl: String(row[colMap[COLUMNS.PHOTO]] || ''),
       tags: String(row[colMap[COLUMNS.TAGS]] || '')
              .split(',').map(t => t.trim()).filter(Boolean)

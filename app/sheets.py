@@ -256,6 +256,7 @@ class SheetsClient:
             "desc": find_col(["описание_кратко", "описание", "desc"]),
             "desc_full": find_col(["описание_полное", "полное"]),
             "stock": find_col(["остаток_расчет", "остаток", "stock", "стартовый"]),
+            "infinite_stock": find_col(["бесконечный_остаток", "infinite_stock"]),
             "active": find_col(["активен", "active", "вкл"]),
             "tags": find_col(["теги", "tags", "категория"]),
             "photo": find_col(["фото", "photo", "url", "картинка", "изображение"]),
@@ -311,6 +312,9 @@ class SheetsClient:
 
             stock = to_int(safe_get(r, cols["stock"]), 100)
 
+            infinite_stock_val = safe_get(r, cols["infinite_stock"]).lower()
+            infinite_stock = infinite_stock_val in ("true", "да", "yes", "1")
+
             products.append(
                 {
                     "sku": sku,
@@ -319,6 +323,7 @@ class SheetsClient:
                     "desc_full": safe_get(r, cols["desc_full"]),
                     "price_rub": to_int(safe_get(r, cols["price"]), 0),
                     "stock": stock,
+                    "infinite_stock": infinite_stock,
                     "supplier_id": "",
                     "photo_url": convert_photo_url(safe_get(r, cols["photo"])),
                     "tags": safe_get(r, cols["tags"]),
