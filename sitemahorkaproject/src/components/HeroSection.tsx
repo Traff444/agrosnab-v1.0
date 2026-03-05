@@ -12,6 +12,7 @@ export function HeroSection() {
           src={`${import.meta.env.BASE_URL}hiro%20mobil1.png`}
           alt="Сельскохозяйственная махорка — оптовые поставки от ООО ТОПХИТ"
           className="h-full w-full object-cover object-center md:hidden"
+          fetchPriority="high"
           draggable={false}
         />
         {/* Desktop Video */}
