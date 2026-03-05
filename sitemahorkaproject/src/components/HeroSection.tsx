@@ -121,7 +121,7 @@ export function HeroSection() {
                          shadow-[0_12px_30px_rgba(0,0,0,0.35)]
                          transition hover:brightness-110 active:scale-[0.99]"
             >
-              Получить прайс в Telegram{" "}
+              Оформить заказ в Телеграм{" "}
               <span className="transition group-hover:translate-x-0.5">→</span>
             </a>
           </div>
@@ -233,7 +233,7 @@ export function HeroSection() {
                          sm:w-auto sm:px-6"
             >
               <span className="text-[16px] font-medium">
-                Получить прайс в Telegram
+                Оформить заказ в Телеграм
               </span>
               <span className="transition group-hover:translate-x-0.5">→</span>
             </a>

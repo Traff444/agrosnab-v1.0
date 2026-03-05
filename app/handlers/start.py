@@ -7,7 +7,7 @@ from datetime import datetime
 
 from aiogram import Dispatcher, F
 from aiogram.filters import CommandStart
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .. import cart_store
 from ..keyboards import back_to_menu_kb, main_menu_kb, persistent_menu
@@ -174,10 +174,43 @@ def register_start_handlers(
             "👨‍💼 <b>Связаться с менеджером</b>\n\n"
             "📱 <b>Telegram:</b> @mahoorka_bot\n"
             "📞 <b>Телефон:</b> +7 (916) 481-07-69\n"
-            "📧 <b>Email:</b> info@mahorkamarket.ru\n\n"
+            "📧 <b>Email:</b> info@makhorkamarket.store\n\n"
             "🕐 Время работы: Пн-Вс 10:00 — 17:00"
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=back_to_menu_kb())
+        await cb.answer()
+
+    @dp.callback_query(F.data == "wholesale:request")
+    async def wholesale_request(cb: CallbackQuery):
+        text = (
+            "📋 <b>Запрос оптового прайса</b>\n\n"
+            "Для получения оптового прайса и индивидуальных условий "
+            "свяжитесь с менеджером удобным способом:\n\n"
+            "📱 <b>Telegram</b> — напишите менеджеру напрямую\n"
+            "📧 <b>Email</b> — отправьте запрос на почту\n\n"
+            "💡 Укажите интересующие позиции и объём, "
+            "менеджер подготовит персональное предложение."
+        )
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="📱 Написать менеджеру",
+                        url="https://t.me/+79164810769",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="📧 Отправить на почту",
+                        url="mailto:info@makhorkamarket.store",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(text="🏠 Меню", callback_data="menu"),
+                ],
+            ]
+        )
+        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
         await cb.answer()
 
     @dp.callback_query(F.data == "noop")

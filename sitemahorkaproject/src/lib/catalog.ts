@@ -53,7 +53,7 @@ export function isInStock(product: Product): boolean {
  * Возвращает текст CTA-кнопки в зависимости от наличия
  */
 export function getCtaText(product: Product): string {
-  return isInStock(product) ? 'Получить прайс' : 'Уточнить в Telegram';
+  return isInStock(product) ? 'Оформить заказ' : 'Уточнить в Telegram';
 }
 
 /**

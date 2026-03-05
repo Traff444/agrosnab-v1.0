@@ -457,7 +457,7 @@ function App() {
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              Открыть Telegram
+              Оформить заказ в Телеграм
               <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
             </a>
           </div>

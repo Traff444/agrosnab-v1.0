@@ -48,6 +48,7 @@ def main_menu_kb(cart_count: int = 0) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="📌 Условия", callback_data="info:terms"),
             ],
             [
+                InlineKeyboardButton(text="📋 Оптовый прайс", callback_data="wholesale:request"),
                 InlineKeyboardButton(text="🤖 AI Менеджер", callback_data="mode:ai"),
             ],
         ]
