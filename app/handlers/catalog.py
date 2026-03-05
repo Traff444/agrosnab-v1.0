@@ -22,7 +22,7 @@ from ..keyboards import (
 )
 from ..services import ProductService
 from ..sheets import SheetsClient
-from ..utils import escape_html
+from ..utils import escape_html, format_catalog_page_text
 from .common import format_product
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,13 @@ def register_catalog_handlers(
 
         # Show grid of products
         total_pages = max(1, (len(products) + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE)
-        text = f"🗂 <b>Каталог</b>\n\n📦 {len(products)} товаров • Страница 1/{total_pages}\n\nВыберите товар:"
+        page_items = products[:CATALOG_PAGE_SIZE]
+        text = format_catalog_page_text(
+            products_page=page_items,
+            page=0,
+            total_pages=total_pages,
+            total_items=len(products),
+        )
         kb = catalog_grid_kb(products, page=0, category="all", cart_count=cart_count)
         await m.answer(text, parse_mode="HTML", reply_markup=kb)
 
@@ -136,10 +142,14 @@ def register_catalog_handlers(
         else:
             category_label = category
 
-        text = (
-            f"🗂 <b>Каталог</b> • {category_label}\n\n"
-            f"📦 {total_items} товаров • Страница {page + 1}/{total_pages}\n\n"
-            "Выберите товар:"
+        start = page * CATALOG_PAGE_SIZE
+        page_items = products[start : start + CATALOG_PAGE_SIZE]
+        text = format_catalog_page_text(
+            products_page=page_items,
+            page=page,
+            total_pages=total_pages,
+            total_items=total_items,
+            category_label=category_label,
         )
         kb = catalog_grid_kb(products, page=page, category=category, cart_count=cart_count)
 

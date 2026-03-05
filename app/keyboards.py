@@ -8,7 +8,7 @@ from aiogram.types import (
 )
 
 from .config import CATALOG_PAGE_SIZE
-from .utils import format_product_button
+from .utils import format_product_button, resolve_badge
 
 
 def persistent_menu() -> ReplyKeyboardMarkup:
@@ -177,8 +177,7 @@ def catalog_grid_kb(
     cart_count: int = 0,
 ) -> InlineKeyboardMarkup:
     """
-    Single column layout with formatted product buttons.
-    Each product button shows: 'badge Name — price ₽' or 'badge Name — нет в наличии'.
+    Clean button-per-product layout: '🌿 СССР 70г • 90 ₽'.
     """
     total = len(products)
     total_pages = max(1, (total + CATALOG_PAGE_SIZE - 1) // CATALOG_PAGE_SIZE)
@@ -187,9 +186,9 @@ def catalog_grid_kb(
 
     rows: list[list[InlineKeyboardButton]] = []
 
-    # Product buttons: 1 per row (single column layout)
+    # Product buttons: 1 per row
     for p in items:
-        button_text = format_product_button(p, max_total=48)
+        button_text = format_product_button(p, max_total=42)
         rows.append(
             [
                 InlineKeyboardButton(
@@ -203,33 +202,30 @@ def catalog_grid_kb(
     nav_row = []
     if page > 0:
         nav_row.append(
-            InlineKeyboardButton(text="⬅️ Назад", callback_data=f"catalog:{page - 1}:{category}")
+            InlineKeyboardButton(text="⬅️", callback_data=f"catalog:{page - 1}:{category}")
         )
     nav_row.append(
         InlineKeyboardButton(
-            text=f"📄 {page + 1}/{total_pages}",
+            text=f"{page + 1}/{total_pages}",
             callback_data=f"pageinfo:{page + 1}:{total_pages}",
         )
     )
     if page < total_pages - 1:
         nav_row.append(
-            InlineKeyboardButton(text="Вперёд ➡️", callback_data=f"catalog:{page + 1}:{category}")
+            InlineKeyboardButton(text="➡️", callback_data=f"catalog:{page + 1}:{category}")
         )
     rows.append(nav_row)
 
-    # Service buttons: 2 per row (two columns)
-    rows.append(
-        [
-            InlineKeyboardButton(text="🗂 Категории", callback_data="categories"),
-            InlineKeyboardButton(text="🔎 Поиск", callback_data="search:start"),
-        ]
-    )
-
-    # Cart and menu: 2 per row
-    cart_label = f"🧺 Корзина ({cart_count})" if cart_count else "🧺 Корзина"
+    # Service row
+    cart_label = f"🛒 ({cart_count})" if cart_count else "🛒 Корзина"
     rows.append(
         [
             InlineKeyboardButton(text=cart_label, callback_data="cart:show"),
+            InlineKeyboardButton(text="🔍 Поиск", callback_data="search:start"),
+        ]
+    )
+    rows.append(
+        [
             InlineKeyboardButton(text="🏠 Меню", callback_data="menu"),
         ]
     )

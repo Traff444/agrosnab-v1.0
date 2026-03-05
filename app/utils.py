@@ -132,18 +132,73 @@ def smart_truncate_name(name: str, max_len: int) -> str:
     return name[: max_len - 1] + "…"
 
 
+def format_catalog_text_line(
+    index: int,
+    product,
+    name_width: int = 22,
+    price_width: int = 8,
+) -> str:
+    """Format one catalog line for <pre> block: '1. Махорка СССР 70г    90 ₽'"""
+    if isinstance(product, dict):
+        name_raw = product.get("name", "")
+        price_value = product.get("price_rub") or product.get("price", 0)
+        stock = product.get("stock", 1)
+        weight = product.get("package_weight")
+    else:
+        name_raw = getattr(product, "name", "")
+        price_value = getattr(product, "price_rub", None) or getattr(product, "price", 0)
+        stock = getattr(product, "stock", 1)
+        weight = getattr(product, "package_weight", None)
+
+    if weight:
+        name_raw = f"{name_raw} {weight}г"
+
+    num_prefix = f"{index}. "
+    available_name = name_width - len(num_prefix)
+    name = smart_truncate_name(name_raw, max(available_name, 8))
+
+    if stock == 0:
+        price_part = "--- ₽"
+    else:
+        price_part = f"{format_price(price_value)} ₽"
+
+    price_padded = price_part.rjust(price_width)
+    name_padded = f"{num_prefix}{name}".ljust(name_width)
+    return f"{name_padded}{price_padded}"
+
+
+def format_catalog_page_text(
+    products_page: list,
+    page: int,
+    total_pages: int,
+    total_items: int,
+    category_label: str = "",
+) -> str:
+    """Build minimal catalog header text."""
+    header = "🌿 <b>MahorkaMarket</b>"
+    if category_label and category_label != "Все товары":
+        header += f" • {category_label}"
+
+    if not products_page:
+        return f"{header}\n\nКаталог пуст."
+
+    return f"{header}\n\nВыберите товар:"
+
+
+def _clean_product_name(name: str) -> str:
+    """Clean product name: strip Махорка, quotes, крупка, NEW."""
+    import re
+    name = re.sub(r'^[Мм]ахорка\s*', '', name)
+    name = name.replace('"', '').replace('\u00ab', '').replace('\u00bb', '')
+    name = re.sub(r'\b[Кк]рупка\b', '', name)
+    name = re.sub(r'\bNEW\b', '', name)
+    return ' '.join(name.split()).strip()
+
+
 def format_product_button(product, max_total: int = 48) -> str:
-    """Build product button text: 'badge Name weight — price ₽' or 'badge Name — нет в наличии'.
-
-    Examples:
-        - "Махорка — 1 000 ₽"
-        - "🔥 Махорка СССР 50г — 1 000 ₽"
-        - "⛔️ Редкий Товар — нет в наличии"
-    """
+    """Build clean product button: '🌿 СССР • 70г — 90 ₽'."""
     badge = resolve_badge(product)
-    prefix = f"{badge} " if badge else ""
 
-    # Support both object and dict
     if isinstance(product, dict):
         stock = product.get("stock", 1)
         name_raw = product.get("name", "")
@@ -155,20 +210,22 @@ def format_product_button(product, max_total: int = 48) -> str:
         price_value = getattr(product, "price_rub", None) or getattr(product, "price", 0)
         weight = getattr(product, "package_weight", None)
 
-    # Add weight to name if present and non-zero
-    # NOTE: weight=0 is intentionally treated as "no weight" (falsy) to avoid
-    # displaying "0г" suffix. This matches the UX expectation that zero means
-    # weight was not specified rather than an actual 0-gram package.
-    if weight:
-        name_raw = f"{name_raw} {weight}г"
+    name_raw = _clean_product_name(name_raw)
+    prefix = f"{badge} " if badge else "🌿 "
 
     if stock == 0:
-        suffix = " — нет в наличии"
+        if weight:
+            suffix = f" • {weight}г — нет"
+        else:
+            suffix = " • нет"
         max_name_len = max_total - len(suffix) - len(prefix)
         name = smart_truncate_name(name_raw, max_name_len)
         return f"{prefix}{name}{suffix}"
 
-    price_str = f" — {format_price(price_value)} ₽"
+    if weight:
+        price_str = f" • {weight}г — {format_price(price_value)} ₽"
+    else:
+        price_str = f" — {format_price(price_value)} ₽"
     max_name_len = max_total - len(price_str) - len(prefix)
     name = smart_truncate_name(name_raw, max_name_len)
     return f"{prefix}{name}{price_str}"

@@ -187,7 +187,7 @@ def register_start_handlers(
             "Для получения оптового прайса и индивидуальных условий "
             "свяжитесь с менеджером удобным способом:\n\n"
             "📱 <b>Telegram</b> — напишите менеджеру напрямую\n"
-            "📧 <b>Email</b> — отправьте запрос на почту\n\n"
+            "📧 <b>Email:</b> info@makhorkamarket.store\n\n"
             "💡 Укажите интересующие позиции и объём, "
             "менеджер подготовит персональное предложение."
         )
@@ -197,12 +197,6 @@ def register_start_handlers(
                     InlineKeyboardButton(
                         text="📱 Написать менеджеру",
                         url="https://t.me/+79164810769",
-                    ),
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="📧 Отправить на почту",
-                        url="mailto:info@makhorkamarket.store",
                     ),
                 ],
                 [
