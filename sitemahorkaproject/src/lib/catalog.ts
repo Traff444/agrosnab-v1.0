@@ -1,3 +1,5 @@
+import posthog from 'posthog-js';
+
 // Типы данных для каталога товаров
 
 export interface Product {
@@ -57,10 +59,11 @@ export function getCtaText(product: Product): string {
 }
 
 /**
- * Генерирует deep link для Telegram бота с SKU товара
+ * Генерирует deep link для Telegram бота с SKU товара и PostHog distinct_id
  */
 export function getTelegramDeepLink(sku: string): string {
-  return `https://t.me/mahoorka_bot?start=${encodeURIComponent(`sku_${sku}`)}`;
+  const phId = posthog.get_distinct_id?.() || '';
+  return `https://t.me/mahoorka_bot?start=${encodeURIComponent(`sku_${sku}_ph_${phId}`)}`;
 }
 
 /**

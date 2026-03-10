@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import posthog from 'posthog-js';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ProductCard } from './components/ProductCard';
@@ -38,6 +39,9 @@ function App() {
           setError(res.error);
         }
         setProducts(res.items);
+        if (res.items.length > 0) {
+          posthog.capture('catalog_loaded', { product_count: res.items.length });
+        }
       })
       .catch(() => setError('Каталог временно недоступен'))
       .finally(() => setLoading(false));
@@ -141,7 +145,10 @@ function App() {
                 <div className="text-center">
                   {!showAllProducts ? (
                     <button
-                      onClick={() => setShowAllProducts(true)}
+                      onClick={() => {
+                        posthog.capture('view_all_products_clicked', { total_products: products.length });
+                        setShowAllProducts(true);
+                      }}
                       className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white/10 transition-colors px-6 py-2.5 md:px-8 md:py-3 rounded-lg font-medium text-sm md:text-base"
                     >
                       Показать весь ассортимент ({products.length - 6} ещё)

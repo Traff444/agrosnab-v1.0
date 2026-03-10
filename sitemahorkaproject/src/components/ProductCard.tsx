@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import posthog from 'posthog-js';
 import { Product, isInStock, getCtaText, getTelegramDeepLink, PLACEHOLDER_IMAGE } from '../lib/catalog';
 
 interface ProductCardProps {
@@ -116,6 +117,13 @@ export function ProductCard({ product }: ProductCardProps) {
           href={telegramLink}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => {
+            posthog.capture('click_telegram_bot', {
+              sku: product.sku,
+              product_name: product.name,
+              price: product.priceRub,
+            });
+          }}
           className={`block w-full transition-all duration-300 py-2 rounded-lg text-center font-medium text-sm shadow-sm ${
             inStock
               ? 'bg-[#6A7758] text-white border border-[#6A7758] hover:bg-color-accent hover:border-color-accent'
