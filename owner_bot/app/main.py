@@ -11,6 +11,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
+from app.analytics import init_posthog, shutdown_posthog
 from app.config import get_settings
 from app.handlers import get_main_router
 from app.security import WhitelistMiddleware
@@ -100,6 +101,7 @@ async def main() -> None:
     """Main async entry point."""
     setup_logging()
     setup_sentry()
+    init_posthog()
     logger = logging.getLogger(__name__)
 
     settings = get_settings()
@@ -137,6 +139,7 @@ async def main() -> None:
             allowed_updates=["message", "callback_query"],
         )
     finally:
+        shutdown_posthog()
         await bot.session.close()
 
 

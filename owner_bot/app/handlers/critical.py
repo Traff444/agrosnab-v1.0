@@ -9,6 +9,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from app.analytics import track
 from app.keyboards import main_menu_keyboard
 from app.photo_enhance import cleanup_tmp_files
 from app.services.intake_service import intake_service
@@ -25,6 +26,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     name = user.first_name if user else "Владелец"
 
     if user:
+        track(user.id, "owner_start")
         await intake_service.clear_session(user.id)
 
     # Lazy cleanup of old tmp files

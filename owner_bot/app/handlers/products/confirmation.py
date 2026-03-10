@@ -4,6 +4,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from app.analytics import track
 from app.keyboards import (
     main_menu_keyboard,
     stock_operation_result_keyboard,
@@ -79,6 +80,11 @@ async def _execute_writeoff(
     await state.clear()
 
     if result.ok:
+        track(callback.from_user.id, "stock_written_off", {
+            "product": payload.get("sku"),
+            "qty": payload["qty"],
+            "reason": payload["reason"],
+        })
         await callback.message.answer(
             f"✅ **Списание выполнено**\n\n"
             f"Было: {result.stock_before} шт.\n"
@@ -112,6 +118,11 @@ async def _execute_correction(
     await state.clear()
 
     if result.ok:
+        track(callback.from_user.id, "stock_corrected", {
+            "product": payload.get("sku"),
+            "old_qty": result.stock_before,
+            "new_qty": result.stock_after,
+        })
         delta = result.stock_after - result.stock_before
         if delta == 0:
             delta_text = "без изменений"
@@ -161,6 +172,8 @@ async def _execute_archive_simple(
             updated_by=f"tg:{actor_username}",
         )
 
+        track(callback.from_user.id, "product_archived", {"product": product.name})
+
         await state.clear()
         await callback.message.answer(
             f"✅ **Товар архивирован**\n\n"
@@ -193,6 +206,9 @@ async def _execute_archive_zero_out(
     await state.clear()
 
     if result.ok:
+        track(callback.from_user.id, "product_archived", {
+            "product": payload.get("sku"),
+        })
         if result.stock_before > 0:
             await callback.message.answer(
                 f"✅ **Товар архивирован с обнулением**\n\n"

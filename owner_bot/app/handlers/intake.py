@@ -10,6 +10,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
+from app.analytics import track
 from app.config import get_settings
 from app.intake_parser import format_parsed_intake
 from app.keyboards import (
@@ -576,6 +577,12 @@ async def process_preview_confirm(callback: CallbackQuery, state: FSMContext) ->
             action = "создан" if result.is_new else "обновлён"
             logger.debug("process_preview_confirm: SUCCESS - product %s", action)
             card = product_service.format_product_card(result.product, show_service_fields=True)
+
+            track(callback.from_user.id, "stock_received", {
+                "product": session.name,
+                "qty": session.quantity,
+                "price": session.price,
+            })
 
             await callback.message.answer(
                 f"✅ Товар {action}!\n\n{card}",
