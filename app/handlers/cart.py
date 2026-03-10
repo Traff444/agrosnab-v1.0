@@ -14,6 +14,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, FSInputFile, Message
 
 from .. import cart_store
+from ..analytics import track
 from ..config import Settings
 from ..invoice import generate_invoice_pdf
 from ..keyboards import (
@@ -211,6 +212,12 @@ def register_cart_handlers(
                 },
             )
 
+            track(user_id, "order_created", {
+                "order_id": order_id,
+                "total": total,
+                "items_count": len(cart_items),
+            })
+
             # CRM: Update lead stage to customer or repeat
             orders_count = await cart_store.get_user_orders_count(user_id)
             stage = "repeat" if orders_count >= 2 else "customer"
@@ -350,6 +357,8 @@ def register_cart_handlers(
                 },
             )
 
+            track(user_id, "add_to_cart", {"product_id": sku, "qty": qty})
+
             # CRM: Update lead stage to cart
             try:
                 await sheets_client.upsert_lead(user_id, stage="cart")
@@ -396,6 +405,7 @@ def register_cart_handlers(
     @dp.callback_query(F.data.startswith("cart:remove:"))
     async def cart_remove(cb: CallbackQuery):
         sku = cb.data.split(":")[2]
+        track(cb.from_user.id, "remove_from_cart", {"product_id": sku})
         await cart_store.remove_from_cart(cb.from_user.id, sku)
 
         # Refresh cart display
@@ -441,6 +451,8 @@ def register_cart_handlers(
             await cb.answer(f"Минималка {summary.min_sum} ₽")
             return
 
+        track(user_id, "start_checkout", {"cart_total": summary.total, "items_count": len(cart_items)})
+
         await state.set_state(CheckoutState.phone)
         msg = "📞 Введите номер телефона (пример: +79990000000):"
         kb = None
@@ -475,6 +487,8 @@ def register_cart_handlers(
 
     async def _after_phone(user_id: int, phone: str, message: Message, state: FSMContext):
         """Common logic after phone is set — CRM + ask FIO."""
+        track(user_id, "enter_phone")
+
         await cart_store.log_crm_event(
             user_id, "checkout_started",
             {"phone": phone[:4] + "***" + phone[-2:] if len(phone) > 6 else "***"},

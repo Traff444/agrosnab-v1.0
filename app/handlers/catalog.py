@@ -10,6 +10,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .. import cart_store
+from ..analytics import track
 from ..config import CATALOG_PAGE_SIZE
 from ..keyboards import (
     back_to_menu_kb,
@@ -52,6 +53,8 @@ def register_catalog_handlers(
                 "source": "text_button",
             },
         )
+
+        track(user_id, "view_catalog", {"category": "all"})
 
         # CRM: Update lead stage to engaged
         try:
@@ -101,6 +104,8 @@ def register_catalog_handlers(
                 "page": page,
             },
         )
+
+        track(user_id, "view_catalog", {"category": category, "page": page})
 
         # CRM: Update lead stage to engaged
         try:
@@ -208,6 +213,8 @@ def register_catalog_handlers(
             },
         )
 
+        track(user_id, "search_product", {"query": query, "results_count": len(found)})
+
         # CRM: Update lead stage to engaged
         try:
             await sheets_client.upsert_lead(user_id, stage="engaged")
@@ -248,6 +255,12 @@ def register_catalog_handlers(
                 "price": product.get("price_rub", 0),
             },
         )
+
+        track(user_id, "view_product", {
+            "product_id": sku,
+            "name": product.get("name", ""),
+            "price": product.get("price_rub", 0),
+        })
 
         # CRM: Update lead stage to engaged
         try:

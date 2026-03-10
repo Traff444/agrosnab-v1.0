@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime
 
 from aiogram import Dispatcher, F
@@ -10,6 +11,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .. import cart_store
+from ..analytics import track, identify, alias
 from ..keyboards import back_to_menu_kb, main_menu_kb, persistent_menu
 from ..services import ProductService
 from ..sheets import SheetsClient
@@ -42,6 +44,19 @@ def register_start_handlers(
                 "source": "direct",
             },
         )
+
+        # PostHog: identify user and track start
+        args = m.get_args() or ""
+        ph_match = re.search(r"ph_(.+)$", args)
+
+        identify(user_id, {
+            "username": m.from_user.username or "",
+            "first_name": m.from_user.first_name or "",
+        })
+        track(user_id, "bot_start", {"source": "deeplink" if args else "organic", "deeplink": args})
+
+        if ph_match:
+            alias(user_id, ph_match.group(1))
 
         # CRM: Upsert lead with consent (user agrees by proceeding)
         try:

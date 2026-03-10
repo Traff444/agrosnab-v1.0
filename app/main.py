@@ -10,6 +10,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import ErrorEvent
 
 from . import cart_store
+from .analytics import init_posthog, shutdown_posthog
 from .config import Settings
 from .handlers import (
     navigation_router,
@@ -110,9 +111,16 @@ async def main():
     register_ai_handlers(dp, product_service, cart_service)  # Must be last (catch-all)
     logger.info("Handlers registered")
 
+    # Initialize PostHog analytics
+    init_posthog()
+    logger.info("PostHog analytics initialized")
+
     # Start polling
     logger.info("Bot started, polling for updates...")
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        shutdown_posthog()
 
 
 if __name__ == "__main__":
