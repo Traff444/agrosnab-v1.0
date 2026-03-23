@@ -48,26 +48,15 @@ export function Footer() {
           <div>
             <h3 className="font-heading font-semibold text-base mb-4 text-text-on-dark">Контакты</h3>
             <div className="flex flex-col gap-2.5">
-              <a
-                href="https://t.me/mahoorka_bot"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-subtext-on-dark hover:text-color-accent hover:translate-x-1 transition-all duration-300 inline-block"
-              >
-                Telegram
-              </a>
-              <a
-                href="tel:+79164810769"
-                className="text-sm text-subtext-on-dark hover:text-color-accent hover:translate-x-1 transition-all duration-300 inline-block"
-              >
-                +7 (916) 481-07-69
-              </a>
-              <a
-                href="mailto:info@mahorkamarket.store"
-                className="text-sm text-subtext-on-dark hover:text-color-accent hover:translate-x-1 transition-all duration-300 inline-block"
-              >
+              <span className="text-sm text-subtext-on-dark">
+                Telegram: +7 (916) 481-07-69
+              </span>
+              <span className="text-sm text-subtext-on-dark">
+                Max: +7 (968) 625-02-92
+              </span>
+              <span className="text-sm text-subtext-on-dark">
                 info@mahorkamarket.store
-              </a>
+              </span>
               <span className="text-xs text-subtext-on-dark opacity-60">По вопросам сотрудничества</span>
             </div>
           </div>
